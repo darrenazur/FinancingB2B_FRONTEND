@@ -1,175 +1,104 @@
-import StatCard from '../../components/StatCard';
-import TransactionRow, { Transaction } from '../../components/transaction/TransactionRow'
-import '../globals.css';
+import Link from 'next/link'
+import RefreshButton from '../../components/actions/RefreshButton'
+import PageHeader from '../../components/PageHeader'
+import StatCard from '../../components/StatCard'
+import { getLoans, getPartners } from '../../lib/api/financing'
+import { formatDate, formatMoney, formatToday, sumMoney } from '../../lib/format'
 
-const STATS = [
-  { label: 'Total Balance',   value: '$248,391.50', delta: 8.2,  icon: '💰', accent: 'var(--blue-primary)' },
-  { label: 'Monthly Income',  value: '$18,240.00',  delta: 12.5, icon: '↓',  accent: 'var(--green)'        },
-  { label: 'Monthly Spend',   value: '$6,820.30',   delta: -3.1, icon: '↑',  accent: 'var(--red)'          },
-  { label: 'Investments',     value: '$94,120.00',  delta: 5.4,  icon: '▲',  accent: 'var(--purple)'       },
-]
+const PLANNED = ['Outstanding balance', 'Payments collected', 'Overdue loans', 'Late fees']
 
-const RECENT_TX: Transaction[] = [
-  { id:'1', name:'Payroll Deposit',       category:'Deposit',    date:'Apr 1, 2026',  amount:  8200.00, status:'completed' },
-  { id:'2', name:'AWS Cloud Services',    category:'Payment',    date:'Apr 2, 2026',  amount:  -430.50, status:'completed' },
-  { id:'3', name:'Wire Transfer — BDO',   category:'Transfer',   date:'Apr 3, 2026',  amount: -2500.00, status:'pending'   },
-  { id:'4', name:'Dividend — AAPL',       category:'Investment', date:'Apr 3, 2026',  amount:   312.40, status:'completed' },
-  { id:'5', name:'Maintenance Fee',       category:'Fee',        date:'Apr 4, 2026',  amount:   -25.00, status:'completed' },
-  { id:'6', name:'Client Payment — Acme', category:'Deposit',    date:'Apr 4, 2026',  amount:  4800.00, status:'completed' },
-]
+export default async function DashboardPage() {
+  const [partners, loans] = await Promise.all([getPartners(), getLoans()])
 
-const ACCOUNTS = [
-  { name: 'Primary Checking', number: '•••• 4821', balance: '$48,210.50', type: 'Checking', color: 'var(--blue-primary)' },
-  { name: 'Savings Account',  number: '•••• 9034', balance: '$106,181.00', type: 'Savings', color: 'var(--purple)'      },
-  { name: 'Investment Acc.',  number: '•••• 1157', balance: '$94,000.00',  type: 'Brokerage', color: 'var(--green)'     },
-]
+  const activePartners = partners.filter(partner => !partner.deleted)
+  const liveLoans = loans.filter(loan => !loan.deleted)
+  const openLoans = liveLoans.filter(loan => !loan.closed)
+  const closedCount = liveLoans.length - openLoans.length
+  const openPHP = openLoans.filter(loan => loan.currency === 'PHP')
+  const otherCurrencyCount = openLoans.length - openPHP.length
+  const currencyHint = otherCurrencyCount > 0 ? `PHP only. ${otherCurrencyCount} other-currency loans not included` : undefined
+  const nextMaturing = [...openLoans]
+    .sort((a, b) => a.maturityDate.localeCompare(b.maturityDate))
+    .slice(0, 5)
+  const openShare = liveLoans.length > 0 ? Math.round((openLoans.length / liveLoans.length) * 100) : 0
 
-export default function DashboardPage() {
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+    <>
+      <PageHeader title="Overview" description={formatToday()} />
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {STATS.map(s => <StatCard key={s.label} {...s} />)}
+      <div className="mb-5 flex flex-wrap gap-3">
+        <RefreshButton />
       </div>
 
-      {/* Middle row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.6fr_1.6fr]">
+        <StatCard
+          label="Active partners"
+          value={String(activePartners.length)}
+          hint={`${partners.length - activePartners.length} deleted`}
+        />
+        <StatCard label="Open loans" value={String(openLoans.length)} hint={`${closedCount} closed`} />
+        <StatCard
+          label="Principal, open loans"
+          value={formatMoney(sumMoney(openPHP.map(loan => loan.principal)))}
+          hint={currencyHint ?? 'As lent, before payments'}
+        />
+        <StatCard
+          label="Interest, open loans"
+          value={formatMoney(sumMoney(openPHP.map(loan => loan.interest)))}
+          hint={currencyHint ?? 'Scheduled, before payments'}
+        />
+      </section>
 
-        {/* Accounts */}
-        <div
-          className="rounded-2xl p-5 flex flex-col gap-4"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>My Accounts</h2>
-            <a href="/accounts" className="text-xs font-medium" style={{ color: 'var(--blue-light)' }}>View all →</a>
+      <section className="mt-5 grid gap-5 xl:grid-cols-3">
+        <div className="rounded-2xl border border-line bg-surface p-7 xl:col-span-2">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-xl font-semibold tracking-tight text-ink">Maturing next</h2>
+            <Link href="/loans" className="text-base font-medium text-accent-strong hover:underline">View all</Link>
           </div>
-          <div className="flex flex-col gap-3">
-            {ACCOUNTS.map(acc => (
-              <div
-                key={acc.name}
-                className="flex items-center gap-3 rounded-xl p-3"
-                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-              >
-                <div
-                  className="rounded-xl flex-shrink-0"
-                  style={{ width: 10, height: 40, background: acc.color, borderRadius: 6 }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{acc.name}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{acc.type} · {acc.number}</p>
-                </div>
-                <p className="text-sm font-bold flex-shrink-0" style={{ color: 'var(--text-primary)' }}>{acc.balance}</p>
-              </div>
-            ))}
-          </div>
+
+          {nextMaturing.length === 0 ? (
+            <p className="py-6 text-base text-muted">No open loans.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {nextMaturing.map(loan => (
+                <li key={loan.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-medium text-ink">{loan.partnerName}</p>
+                    <p className="text-sm text-muted">Due {formatDate(loan.maturityDate)}</p>
+                  </div>
+                  <p className="text-lg font-semibold tabular-nums text-ink">{formatMoney(loan.principal, loan.currency)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        {/* Spending breakdown */}
-        <div
-          className="rounded-2xl p-5 flex flex-col gap-4"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
-        >
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Spending Breakdown</h2>
-          <div className="flex flex-col gap-3">
-            {[
-              { label: 'Operations',  pct: 42, amount: '$2,862', color: 'var(--blue-primary)' },
-              { label: 'Payroll',     pct: 28, amount: '$1,910', color: 'var(--purple)'       },
-              { label: 'Software',    pct: 18, amount: '$1,228', color: 'var(--green)'         },
-              { label: 'Other',       pct: 12, amount: '$820',   color: 'var(--amber)'         },
-            ].map(item => (
-              <div key={item.label} className="flex flex-col gap-1.5">
-                <div className="flex justify-between text-xs">
-                  <span style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{item.amount}</span>
-                </div>
-                <div className="rounded-full h-1.5 w-full" style={{ background: 'var(--bg-elevated)' }}>
-                  <div
-                    className="rounded-full h-1.5"
-                    style={{ width: `${item.pct}%`, background: item.color }}
-                  />
-                </div>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.pct}% of total</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div
-          className="rounded-2xl p-5 flex flex-col gap-4"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
-        >
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Transfer',  icon: '⇄', color: 'var(--blue-primary)' },
-              { label: 'Deposit',   icon: '↓', color: 'var(--green)'        },
-              { label: 'Pay Bill',  icon: '◎', color: 'var(--amber)'        },
-              { label: 'Invest',    icon: '▲', color: 'var(--purple)'       },
-            ].map(a => (
-              <button
-                key={a.label}
-                className="rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer transition-colors"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-secondary)',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <span
-                  className="flex items-center justify-center rounded-xl text-lg"
-                  style={{ width: 40, height: 40, background: `${a.color}18`, color: a.color }}
-                >
-                  {a.icon}
-                </span>
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{a.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Monthly summary */}
-          <div
-            className="rounded-xl p-4 mt-auto"
-            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>April Summary</p>
-            <div className="flex justify-between text-sm">
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>Income</p>
-                <p style={{ color: 'var(--green)', fontWeight: 700 }}>+$13,000</p>
-              </div>
-              <div className="text-right">
-                <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>Expenses</p>
-                <p style={{ color: 'var(--red)', fontWeight: 700 }}>−$2,956</p>
-              </div>
-              <div className="text-right">
-                <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>Net</p>
-                <p style={{ color: 'var(--blue-light)', fontWeight: 700 }}>+$10,044</p>
-              </div>
+        <div className="flex flex-col gap-5">
+          <div className="rounded-2xl border border-line bg-surface p-7">
+            <h2 className="text-xl font-semibold tracking-tight text-ink">Loan status</h2>
+            <div className="mt-5 h-3 overflow-hidden rounded-full bg-elevated">
+              <div className="h-full rounded-full bg-accent" style={{ width: `${openShare}%` }} />
             </div>
+            <dl className="mt-4 flex justify-between text-base">
+              <div>
+                <dt className="text-muted">Open</dt>
+                <dd className="text-lg font-semibold text-ink">{openLoans.length}</dd>
+              </div>
+              <div className="text-right">
+                <dt className="text-muted">Closed</dt>
+                <dd className="text-lg font-semibold text-ink">{closedCount}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-[var(--border)] p-7">
+            <h2 className="text-lg font-semibold tracking-tight text-ink">Coming next</h2>
+            <ul className="mt-3 flex flex-col gap-1.5 text-base text-body">
+              {PLANNED.map(item => <li key={item}>{item}</li>)}
+            </ul>
           </div>
         </div>
-      </div>
-
-      {/* Recent Transactions */}
-      <div
-        className="rounded-2xl p-5"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Recent Transactions</h2>
-          <a href="/transactions" className="text-xs font-medium" style={{ color: 'var(--blue-light)' }}>View all →</a>
-        </div>
-        <div>
-          {RECENT_TX.map((tx, i) => (
-            <TransactionRow key={tx.id} tx={tx} last={i === RECENT_TX.length - 1} />
-          ))}
-        </div>
-      </div>
-
-    </div>
+      </section>
+    </>
   )
 }

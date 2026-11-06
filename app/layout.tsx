@@ -1,16 +1,19 @@
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import DashboardShell from '../components/dashboard/DashboardShell'
 
+const inter = Inter({ subsets: ['latin'] })
+
 export const metadata: Metadata = {
-  title: 'NexusBank Dashboard',
-  description: 'Banking dashboard',
+  title: 'BankingMS',
+  description: 'Lending management system',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className={inter.className}>
         <DashboardShell>{children}</DashboardShell>
       </body>
     </html>
