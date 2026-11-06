@@ -2,6 +2,8 @@ import 'server-only'
 import { Audit, AuditRow, readAudit } from '../audit'
 import { getAllPages, getList, getRecord } from './client'
 
+const isFileKey = (path: string | null | undefined) => /^(partners|payments)\/[0-9a-f-]{36}$/.test(path ?? '')
+
 // id is the database key for API calls and stays off the screen. People see the number from NORANGE.
 export interface Partner extends Audit {
   id: number
@@ -11,6 +13,7 @@ export interface Partner extends Audit {
   contactNo: string
   status: string
   hasIdNumber: boolean
+  files: { id1: boolean; id2: boolean; selfie: boolean }
   assignedUserId: number | null
   deleted: boolean
 }
@@ -73,6 +76,7 @@ export interface Payment extends Audit {
   date: string
   methodId: number
   referenceNo: string
+  hasProof: boolean
   reversalOf: number | null
   reversalReason: string
 }
@@ -165,6 +169,7 @@ interface InstallmentRow {
 }
 
 interface PaymentRow extends AuditRow {
+  ProofPath: string | null
   PaymentTransactionID: number
   PaymentNo: string | null
   AmountPaid: string
@@ -229,6 +234,7 @@ export async function getPartners(): Promise<Partner[]> {
     contactNo: row.ContactNo ?? '',
     status: row.VerificationStatus,
     hasIdNumber: Boolean(row.HasIDNumber),
+    files: { id1: isFileKey(row.IDImgPath1), id2: isFileKey(row.IDImgPath2), selfie: isFileKey(row.SelfiePath) },
     assignedUserId: row.AssignedUserID,
     deleted: Boolean(row.Deleted),
     ...readAudit(audit.get(row.PartnerProfileID) ?? {}),
@@ -236,8 +242,7 @@ export async function getPartners(): Promise<Partner[]> {
 }
 
 export async function getPartnerDetails(id: number): Promise<PartnerDetails | null> {
-  const rows = await getAllPages<PartnerRow>('/partner-summary-view')
-  const row = rows.find(item => item.PartnerProfileID === id)
+  const row = await getRecord<PartnerRow>(`/partner-details/${id}`)
   if (!row) return null
 
   return {
@@ -297,6 +302,7 @@ export async function getPayments(loanId: number): Promise<Payment[]> {
       date: row.TransactionDt,
       methodId: row.PaymentMethodID,
       referenceNo: row.ReferenceNo ?? '',
+      hasProof: isFileKey(row.ProofPath),
       reversalOf: row.ReversalOfPaymentID,
       reversalReason: row.ReversalReason ?? '',
       ...readAudit(row),

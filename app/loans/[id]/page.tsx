@@ -173,7 +173,14 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
                   <td className={`${CELL} whitespace-nowrap`}>{formatDate(item.date)}</td>
                   <td className={MONEY_CELL}>{money(item.amount)}</td>
                   <td className={CELL}>{methodName(item.methodId)}</td>
-                  <td className={CELL}>{item.referenceNo}</td>
+                  <td className={CELL}>
+                    <p>{item.referenceNo}</p>
+                    {item.hasProof && (
+                      <a href={`/files/proof/${item.id}`} target="_blank" rel="noreferrer" className="text-sm font-medium text-accent-strong hover:underline">
+                        View proof
+                      </a>
+                    )}
+                  </td>
                   <td className={CELL}><AuditCell date={item.createdAt} by={item.createdBy} /></td>
                   <td className={CELL}><AuditCell date={item.updatedAt} by={item.updatedBy} /></td>
                   <td className={`${CELL} text-right`}>

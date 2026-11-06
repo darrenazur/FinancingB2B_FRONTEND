@@ -7,6 +7,12 @@ import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
 import LockNotice from '../forms/LockNotice'
 import { useRecordLock } from '../forms/useRecordLock'
 
+const FILES = [
+  { kind: 'id1', label: 'ID' },
+  { kind: 'id2', label: 'Second ID' },
+  { kind: 'selfie', label: 'Selfie' },
+] as const
+
 const NEXT_STEPS: Record<string, { status: string; label: string }[]> = {
   PENDING: [{ status: 'MATCHED', label: 'Mark as matched' }, { status: 'REJECTED', label: 'Reject' }],
   MATCHED: [{ status: 'VERIFIED', label: 'Verify' }, { status: 'REJECTED', label: 'Reject' }],
@@ -65,6 +71,24 @@ function VerificationDialog({ partner, onClose }: { partner: Partner; onClose: (
       <p className="mt-3 text-base text-body">
         Current status: {partner.status}. Check the ID and selfie before moving this partner. Rejecting is final here.
       </p>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {FILES.map(file => (
+          <div key={file.kind} className="text-sm text-muted">
+            <p className="mb-1">{file.label}</p>
+            {partner.files[file.kind] ? (
+              <a href={`/files/partner/${partner.id}/${file.kind}`} target="_blank" rel="noreferrer">
+                <img
+                  src={`/files/partner/${partner.id}/${file.kind}`}
+                  alt={`${file.label} of ${partner.name}`}
+                  className="h-24 w-full rounded-xl border border-line object-cover"
+                />
+              </a>
+            ) : (
+              <p className="flex h-24 items-center justify-center rounded-xl border border-line">No file</p>
+            )}
+          </div>
+        ))}
+      </div>
       {partner.status === 'MATCHED' && !partner.hasIdNumber && (
         <p className="mt-3 text-base text-bad">This partner has no ID number, so they can’t be verified. Add one through Edit.</p>
       )}

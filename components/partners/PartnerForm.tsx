@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { savePartner } from '../../app/partners/actions'
 import type { PartnerDetails, PartnerLookups } from '../../lib/api/financing'
 import DatePicker from '../forms/DatePicker'
+import FileField from '../forms/FileField'
 import FormDialog, { digitsOnly, Field, INPUT, useFields } from '../forms/FormDialog'
 
 // The ID number hash includes the type, so one spelling per ID keeps duplicate checks working.
@@ -43,6 +44,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
   const provinces = lookups.provinces.filter(item => String(item.countryId) === values.countryId)
   const cities = lookups.cities.filter(item => String(item.provinceId) === values.provinceId)
   const zipCodes = lookups.zipCodes.filter(item => String(item.cityId) === values.cityId)
+  const fileHref = (kind: string, value: string) => (partner && value.startsWith('partners/') ? `/files/partner/${partner.id}/${kind}` : undefined)
   const idTypes = (current: string) => (current && !ID_TYPES.includes(current) ? [current, ...ID_TYPES] : ID_TYPES)
 
   return (
@@ -171,12 +173,23 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
               className={INPUT}
             />
           </Field>
-          <Field label="ID image path">
-            <input {...field('idImgPath1')} name="IDImgPath1" required={isNew} maxLength={500} className={INPUT} />
-          </Field>
-          <Field label="Selfie path (optional)">
-            <input {...field('selfiePath')} name="SelfiePath" maxLength={500} className={INPUT} />
-          </Field>
+          <FileField
+            label="ID image"
+            name="IDImgPath1"
+            kind="id"
+            value={values.idImgPath1}
+            onChange={key => setValues(current => ({ ...current, idImgPath1: key }))}
+            viewHref={fileHref('id1', values.idImgPath1)}
+            required={isNew}
+          />
+          <FileField
+            label="Selfie (optional)"
+            name="SelfiePath"
+            kind="selfie"
+            value={values.selfiePath}
+            onChange={key => setValues(current => ({ ...current, selfiePath: key }))}
+            viewHref={fileHref('selfie', values.selfiePath)}
+          />
           <Field label="Second ID type (optional)">
             <select {...field('idType2')} name="IDType2" className={INPUT}>
               <option value="">None</option>
@@ -193,9 +206,14 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
               className={INPUT}
             />
           </Field>
-          <Field label="Second ID image path">
-            <input {...field('idImgPath2')} name="IDImgPath2" maxLength={500} className={INPUT} />
-          </Field>
+          <FileField
+            label="Second ID image"
+            name="IDImgPath2"
+            kind="id"
+            value={values.idImgPath2}
+            onChange={key => setValues(current => ({ ...current, idImgPath2: key }))}
+            viewHref={fileHref('id2', values.idImgPath2)}
+          />
         </div>
       </fieldset>
 

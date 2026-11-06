@@ -23,10 +23,10 @@ function readConfig() {
   return { baseUrl, adminKey }
 }
 
-export async function request(path: string, init?: RequestInit) {
+async function callApi(path: string, init?: RequestInit) {
   const { baseUrl, adminKey } = readConfig()
   const store = await cookies()
-  const response = await fetch(`${baseUrl}${path}`, {
+  return fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
       'x-admin-key': adminKey,
@@ -36,8 +36,31 @@ export async function request(path: string, init?: RequestInit) {
     },
     cache: 'no-store',
   })
+}
+
+export async function request(path: string, init?: RequestInit) {
+  const response = await callApi(path, init)
   const body = await response.json().catch(() => null)
   return { response, body }
+}
+
+// Passes a stored file to the browser. The API has already checked this user's access.
+export async function fileResponse(path: string) {
+  try {
+    const response = await callApi(path)
+    if (!response.ok) return new Response('File not found', { status: 404 })
+
+    return new Response(response.body, {
+      headers: {
+        'Content-Type': response.headers.get('Content-Type') ?? 'application/octet-stream',
+        'Content-Disposition': 'inline',
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-store',
+      },
+    })
+  } catch {
+    return new Response('File not available', { status: 503 })
+  }
 }
 
 // A page read with a dead session goes back to login. A temporary password goes to the change step.
