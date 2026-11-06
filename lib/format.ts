@@ -21,6 +21,12 @@ export function sumMoney(values: string[]): bigint {
   return values.reduce((total, value) => total + toScaled(value), ZERO)
 }
 
+// Plain amount for a form field: no commas or currency, two decimals as the API takes.
+export function toAmount(value: bigint): string {
+  const cents = (value + HALF_CENT) / CENT_DIVISOR
+  return `${cents / HUNDRED}.${(cents % HUNDRED).toString().padStart(2, '0')}`
+}
+
 export function formatMoney(value: string | bigint, currency = 'PHP'): string {
   const scaled = typeof value === 'bigint' ? value : toScaled(value)
   const negative = scaled < ZERO

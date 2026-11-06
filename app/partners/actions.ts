@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { send } from '../../lib/api/client'
 import { getPartnerDetails, PartnerDetails } from '../../lib/api/financing'
-import { ACTOR, readableError } from '../../lib/api/messages'
+import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
 
 const TERMS_VERSION = '1.0'
@@ -39,7 +39,6 @@ export async function savePartner(id: number | null, _previous: SaveState, formD
   const payload = {
     ...readFields(formData, OTHER_FIELDS),
     ...readFields(sensitive ? formData : new FormData(), SENSITIVE_FIELDS),
-    DeviceFingerprint: ACTOR,
   }
 
   try {
@@ -50,15 +49,30 @@ export async function savePartner(id: number | null, _previous: SaveState, formD
           DataUsageConsent: formData.get('DataUsageConsent') === 'on',
           TandCVersion: TERMS_VERSION,
           DateAccepted: new Date().toISOString(),
-          CreatedBy: ACTOR,
         })
       : await send('PUT', '/partner-profile-update', {
           ...payload,
           PartnerProfileID: id,
           UpdateSensitiveData: sensitive,
-          UpdatedBy: ACTOR,
         })
 
+    if (!result.ok) return { ok: false, error: readableError(result.message) }
+  } catch {
+    return NOT_REACHABLE
+  }
+
+  refresh()
+  return { ok: true, error: null }
+}
+
+export async function assignPartner(id: number, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  const user = String(formData.get('AssignedUserID') ?? '')
+
+  try {
+    const result = await send('PUT', '/partner-assign', {
+      PartnerProfileID: id,
+      AssignedUserID: user === '' ? null : Number(user),
+    })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
     return NOT_REACHABLE
@@ -73,7 +87,6 @@ export async function updateVerification(id: number, status: string): Promise<Sa
     const result = await send('PUT', '/partner-verification-update', {
       PartnerProfileID: id,
       StatusName: status,
-      UpdatedBy: ACTOR,
     })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
@@ -88,8 +101,6 @@ export async function deletePartner(id: number): Promise<SaveState> {
   try {
     const result = await send('DELETE', '/partner-profile-delete', {
       PartnerProfileID: id,
-      DeviceFingerprint: ACTOR,
-      UpdatedBy: ACTOR,
     })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {

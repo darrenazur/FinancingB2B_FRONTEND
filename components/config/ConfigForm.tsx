@@ -3,7 +3,10 @@
 import { FormEvent, startTransition, useActionState, useEffect, useRef, useState } from 'react'
 import { saveConfigRecord } from '../../app/config/actions'
 import { ConfigField, ConfigResource, SaveState } from '../../lib/config/resources'
+import { configLock } from '../../lib/lock'
 import { digitsOnly } from '../forms/FormDialog'
+import LockNotice from '../forms/LockNotice'
+import { useRecordLock } from '../forms/useRecordLock'
 import type { ConfigRow, FieldOption } from './ConfigTable'
 
 const INPUT = 'w-full rounded-xl border border-[var(--border)] bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent disabled:bg-elevated disabled:text-muted'
@@ -21,6 +24,7 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
   const action = saveConfigRecord.bind(null, resource.key, row?.id ?? null)
   const [state, formAction, pending] = useActionState(action, INITIAL)
   const [selected, setSelected] = useState<Record<string, string>>(() => row?.values ?? {})
+  const recordLock = useRecordLock(row ? configLock(resource.path, row.id) : undefined)
 
   useEffect(() => {
     dialogRef.current?.showModal()
@@ -66,6 +70,9 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
         {row ? 'Edit' : 'Add'} {resource.label}
       </h2>
 
+      {recordLock.status !== 'held' ? (
+        <LockNotice lock={recordLock} onClose={onClose} />
+      ) : (
       <form onSubmit={submit} className="mt-6 flex flex-col gap-5">
         {resource.fields.map(field => {
           const locked = Boolean(row && field.lockOnEdit)
@@ -121,6 +128,7 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
           </button>
         </div>
       </form>
+      )}
     </dialog>
   )
 }

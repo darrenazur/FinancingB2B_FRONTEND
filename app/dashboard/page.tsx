@@ -3,12 +3,18 @@ import RefreshButton from '../../components/actions/RefreshButton'
 import PageHeader from '../../components/PageHeader'
 import StatCard from '../../components/StatCard'
 import { getLoans, getPartners } from '../../lib/api/financing'
+import { getCurrentUser } from '../../lib/api/session'
+import { can } from '../../lib/permissions'
 import { formatDate, formatMoney, formatToday, sumMoney } from '../../lib/format'
 
 const PLANNED = ['Outstanding balance', 'Payments collected', 'Overdue loans', 'Late fees']
 
 export default async function DashboardPage() {
-  const [partners, loans] = await Promise.all([getPartners(), getLoans()])
+  const permissions = (await getCurrentUser())?.permissions ?? []
+  const [partners, loans] = await Promise.all([
+    can(permissions, 'partner.view') ? getPartners() : [],
+    can(permissions, 'loan.view') ? getLoans() : [],
+  ])
 
   const activePartners = partners.filter(partner => !partner.deleted)
   const liveLoans = loans.filter(loan => !loan.deleted)

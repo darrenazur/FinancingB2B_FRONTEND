@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { updateVerification } from '../../app/partners/actions'
 import type { Partner } from '../../lib/api/financing'
 import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
+import LockNotice from '../forms/LockNotice'
+import { useRecordLock } from '../forms/useRecordLock'
 
 const NEXT_STEPS: Record<string, { status: string; label: string }[]> = {
   PENDING: [{ status: 'MATCHED', label: 'Mark as matched' }, { status: 'REJECTED', label: 'Reject' }],
@@ -34,6 +36,7 @@ function VerificationDialog({ partner, onClose }: { partner: Partner; onClose: (
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const recordLock = useRecordLock({ type: 'PARTNER', id: partner.id })
 
   useEffect(() => {
     dialogRef.current?.showModal()
@@ -55,6 +58,10 @@ function VerificationDialog({ partner, onClose }: { partner: Partner; onClose: (
       className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-surface p-8 text-left text-ink shadow-xl backdrop:bg-black/30"
     >
       <h2 className="text-2xl font-semibold tracking-tight">Verify {partner.name}</h2>
+      {recordLock.status !== 'held' ? (
+        <LockNotice lock={recordLock} onClose={onClose} />
+      ) : (
+      <>
       <p className="mt-3 text-base text-body">
         Current status: {partner.status}. Check the ID and selfie before moving this partner. Rejecting is final here.
       </p>
@@ -86,6 +93,8 @@ function VerificationDialog({ partner, onClose }: { partner: Partner; onClose: (
           </button>
         ))}
       </div>
+      </>
+      )}
     </dialog>
   )
 }

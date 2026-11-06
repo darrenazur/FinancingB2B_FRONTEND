@@ -13,9 +13,11 @@ interface AddPaymentButtonProps {
   loanId: number
   loanNo: string
   methods: Option[]
+  due: { amount: string; label: string } | null
+  loanDate: string
 }
 
-export default function AddPaymentButton({ loanId, loanNo, methods }: AddPaymentButtonProps) {
+export default function AddPaymentButton({ loanId, loanNo, methods, due, loanDate }: AddPaymentButtonProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -26,13 +28,14 @@ export default function AddPaymentButton({ loanId, loanNo, methods }: AddPayment
       >
         Add payment
       </button>
-      {open && <PaymentForm loanId={loanId} loanNo={loanNo} methods={methods} onClose={() => setOpen(false)} />}
+      {open && <PaymentForm loanId={loanId} loanNo={loanNo} methods={methods} due={due} loanDate={loanDate} onClose={() => setOpen(false)} />}
     </>
   )
 }
 
-function PaymentForm({ loanId, loanNo, methods, onClose }: AddPaymentButtonProps & { onClose: () => void }) {
+function PaymentForm({ loanId, loanNo, methods, due, loanDate, onClose }: AddPaymentButtonProps & { onClose: () => void }) {
   const [requestKey] = useState(newRequestKey)
+  const [payDue, setPayDue] = useState(false)
   const { values, setValues, field } = useFields({
     AmountPaid: '',
     TransactionDt: manilaToday(),
@@ -42,15 +45,28 @@ function PaymentForm({ loanId, loanNo, methods, onClose }: AddPaymentButtonProps
   })
 
   return (
-    <FormDialog title={`Add payment to loan ${loanNo}`} action={addPayment.bind(null, loanId, requestKey)} onClose={onClose}>
+    <FormDialog title={`Add payment to loan ${loanNo}`} action={addPayment.bind(null, loanId, requestKey)} onClose={onClose} lock={{ type: 'LOAN', id: loanId }}>
+      {due && (
+        <label className="flex items-start gap-3 text-base text-body">
+          <input
+            type="checkbox"
+            checked={payDue}
+            onChange={event => setPayDue(event.target.checked)}
+            className="mt-1 h-4 w-4"
+          />
+          Pay total due ({due.label})
+        </label>
+      )}
       <Field label="Amount" hint="Paid to the oldest installment first: late fee, interest, then principal.">
         <input
           {...field('AmountPaid', decimalOnly(2))}
+          value={payDue && due ? due.amount : values.AmountPaid}
+          readOnly={payDue}
           required
           inputMode="decimal"
           pattern="\d{1,13}(\.\d{1,2})?"
           title="An amount with up to 2 decimal places, without commas."
-          className={INPUT}
+          className={`${INPUT} ${payDue ? 'bg-elevated text-muted' : ''}`}
         />
       </Field>
       <Field label="Payment date">
@@ -58,6 +74,7 @@ function PaymentForm({ loanId, loanNo, methods, onClose }: AddPaymentButtonProps
           name="TransactionDt"
           value={values.TransactionDt}
           onChange={TransactionDt => setValues(current => ({ ...current, TransactionDt }))}
+          min={loanDate}
           max={manilaToday()}
           required
         />

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { ReactNode } from 'react'
 import ConfirmAction from '../../../components/actions/ConfirmAction'
 import RefreshButton from '../../../components/actions/RefreshButton'
@@ -10,7 +10,9 @@ import StatCard from '../../../components/StatCard'
 import StatusBadge from '../../../components/StatusBadge'
 import AuditCell from '../../../components/table/AuditCell'
 import { getInstallments, getLoan, getPaymentMethods, getPayments, getPenalties, Installment } from '../../../lib/api/financing'
-import { formatDate, formatMoney, sumMoney } from '../../../lib/format'
+import { getCurrentUser } from '../../../lib/api/session'
+import { formatDate, formatMoney, sumMoney, toAmount } from '../../../lib/format'
+import { can } from '../../../lib/permissions'
 import { closeLoan, reversePayment, waivePenalty } from '../actions'
 
 const TONE: Record<string, 'good' | 'neutral' | 'bad'> = {
@@ -21,6 +23,7 @@ const TONE: Record<string, 'good' | 'neutral' | 'bad'> = {
 }
 // Each table scrolls inside its own box, so a long payment list doesn't push the late fees far down the page.
 const TABLE_HEAD = 'sticky top-0 z-10 bg-surface shadow-[0_1px_0_var(--border)]'
+const CLOSED_INSTALLMENTS = ['SETTLED', 'CANCELLED', 'WRITTEN OFF']
 const HEADER_CELL = 'px-5 py-4 font-medium'
 const CELL = 'px-5 py-5'
 const MONEY_CELL = `${CELL} text-right tabular-nums`
@@ -42,6 +45,9 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   const { id } = await params
   if (!/^\d{10}$/.test(id)) notFound()
 
+  const permissions = (await getCurrentUser())?.permissions ?? []
+  if (!can(permissions, 'loan.view')) redirect('/dashboard')
+
   const loan = await getLoan(id)
   if (!loan) notFound()
 
@@ -53,6 +59,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   ])
 
   const isOpen = !loan.closed && !loan.deleted
+  const money = (value: string | bigint) => formatMoney(value, loan.currency)
   const owed = installments.filter(item => item.status !== 'CANCELLED')
   const paid = sumMoney(owed.map(item => item.paid))
   const balance = sumMoney(owed.flatMap(item => [item.principal, item.interest])) - paid
@@ -63,10 +70,15 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
     item.interest,
     ...unpaidFees.filter(fee => fee.installmentNo === item.number).map(fee => fee.fee),
   ])
+  // What the form fills in when "Pay total due" is checked: what is left on the oldest open installment.
+  const nextDue = installments.find(item => !CLOSED_INSTALLMENTS.includes(item.status))
+  const dueLeft = nextDue ? totalDue(nextDue) - sumMoney([nextDue.paid]) : BigInt(0)
+  const due = nextDue && dueLeft > BigInt(0)
+    ? { amount: toAmount(dueLeft), label: `${money(dueLeft)}, installment ${nextDue.number}` }
+    : null
   const reversedIds = new Set(payments.map(item => item.reversalOf))
   const methodName = (methodId: number) => methods.find(item => item.id === methodId)?.label ?? `Method ${methodId}`
   const paymentNo = (paymentId: number) => payments.find(item => item.id === paymentId)?.paymentNo
-  const money = (value: string | bigint) => formatMoney(value, loan.currency)
 
   return (
     <>
@@ -79,14 +91,15 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
       />
 
       <div className="mb-8 flex flex-wrap gap-3">
-        {isOpen && <AddPaymentButton loanId={loan.id} loanNo={loan.loanNo} methods={methods} />}
+        {isOpen && can(permissions, 'payment.add') && <AddPaymentButton loanId={loan.id} loanNo={loan.loanNo} methods={methods} due={due} loanDate={loan.createdAt.slice(0, 10)} />}
         <RefreshButton />
-        {isOpen && (
+        {isOpen && can(permissions, 'loan.close') && (
           <ConfirmAction
             label="Close"
             title={`Close loan ${loan.loanNo}?`}
             message={CLOSE_LOAN_MESSAGE}
             action={closeLoan.bind(null, loan.id)}
+            lock={{ type: 'LOAN', id: loan.id }}
             triggerClass="rounded-xl border border-[var(--border)] bg-surface px-6 py-3 text-base font-medium text-ink hover:bg-elevated"
           />
         )}
@@ -164,13 +177,14 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
                   <td className={CELL}><AuditCell date={item.createdAt} by={item.createdBy} /></td>
                   <td className={CELL}><AuditCell date={item.updatedAt} by={item.updatedBy} /></td>
                   <td className={`${CELL} text-right`}>
-                    {isOpen && !item.reversalOf && !reversedIds.has(item.id) && (
+                    {isOpen && can(permissions, 'payment.reverse') && !item.reversalOf && !reversedIds.has(item.id) && (
                       <ConfirmAction
                         label="Reverse"
                         title={`Reverse payment ${item.paymentNo}?`}
                         message="A negative payment is recorded and the amounts go back onto the installments. The original stays on file."
                         reasonLabel="Reason"
                         action={reversePayment.bind(null, loan.id, item.id)}
+                        lock={{ type: 'LOAN', id: loan.id }}
                       />
                     )}
                   </td>
@@ -205,13 +219,14 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
                   <td className={CELL}><AuditCell date={item.createdAt} by={item.createdBy} /></td>
                   <td className={CELL}><AuditCell date={item.updatedAt} by={item.updatedBy} /></td>
                   <td className={`${CELL} text-right`}>
-                    {isOpen && item.status === 'UNPAID' && (
+                    {isOpen && can(permissions, 'penalty.waive') && item.status === 'UNPAID' && (
                       <ConfirmAction
                         label="Waive"
                         title={`Waive the late fee on installment ${item.installmentNo}?`}
                         message="The fee stops counting toward what the borrower owes. The record stays on file."
                         reasonLabel="Reason"
                         action={waivePenalty.bind(null, loan.id, item.id)}
+                        lock={{ type: 'LOAN', id: loan.id }}
                       />
                     )}
                   </td>

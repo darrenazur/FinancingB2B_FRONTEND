@@ -2,13 +2,15 @@
 
 import { useState, useTransition } from 'react'
 import { deletePartner, loadPartner } from '../../app/partners/actions'
-import type { Partner, PartnerDetails, PartnerLookups } from '../../lib/api/financing'
+import type { Option, Partner, PartnerDetails, PartnerLookups } from '../../lib/api/financing'
+import { can } from '../../lib/permissions'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
 import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
 import StatusBadge from '../StatusBadge'
 import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
+import AssignAction from './AssignAction'
 import PartnerForm from './PartnerForm'
 import VerificationAction from './VerificationAction'
 
@@ -57,9 +59,11 @@ const COLUMNS: Column<Partner>[] = [
 interface PartnersTableProps {
   partners: Partner[]
   lookups: PartnerLookups
+  users: Option[]
+  permissions: string[]
 }
 
-export default function PartnersTable({ partners, lookups }: PartnersTableProps) {
+export default function PartnersTable({ partners, lookups, users, permissions }: PartnersTableProps) {
   const [form, setForm] = useState<PartnerDetails | 'new' | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, startLoading] = useTransition()
@@ -83,36 +87,44 @@ export default function PartnersTable({ partners, lookups }: PartnersTableProps)
         rowKey={partner => partner.id}
         toolbar={
           <>
-            <button
-              onClick={() => setForm('new')}
-              className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
-            >
-              Add
-            </button>
+            {can(permissions, 'partner.add') && (
+              <button
+                onClick={() => setForm('new')}
+                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+              >
+                Add
+              </button>
+            )}
             <RefreshButton />
           </>
         }
         searchLabel="Search partners"
         emptyText="No partners yet."
-        minWidth="1400px"
+        minWidth="1500px"
         defaultSort={NEWEST_FIRST}
         rowActions={partner => !partner.deleted && (
           <div className="flex justify-end gap-2.5">
-            <VerificationAction partner={partner} />
-            <button
-              onClick={() => openEdit(partner.id)}
-              disabled={loading}
-              className={ROW_BUTTON_NEUTRAL}
-              aria-label={`Edit ${partner.name}`}
-            >
-              Edit
-            </button>
-            <ConfirmAction
-              label="Delete"
-              title={`Delete ${partner.name}?`}
-              message="The record stays on file but is marked deleted. A partner with an open loan can't be deleted."
-              action={deletePartner.bind(null, partner.id)}
-            />
+            {can(permissions, 'partner.assign') && <AssignAction partner={partner} users={users} />}
+            {can(permissions, 'partner.verify') && <VerificationAction partner={partner} />}
+            {can(permissions, 'partner.edit') && (
+              <button
+                onClick={() => openEdit(partner.id)}
+                disabled={loading}
+                className={ROW_BUTTON_NEUTRAL}
+                aria-label={`Edit ${partner.name}`}
+              >
+                Edit
+              </button>
+            )}
+            {can(permissions, 'partner.delete') && (
+              <ConfirmAction
+                label="Delete"
+                title={`Delete ${partner.name}?`}
+                message="The record stays on file but is marked deleted. A partner with an open loan can't be deleted."
+                action={deletePartner.bind(null, partner.id)}
+                lock={{ type: 'PARTNER', id: partner.id }}
+              />
+            )}
           </div>
         )}
       />

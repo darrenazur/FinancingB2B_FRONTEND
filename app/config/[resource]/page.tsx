@@ -1,10 +1,12 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import ConfigTable, { ConfigRow, FieldOption } from '../../../components/config/ConfigTable'
 import PageHeader from '../../../components/PageHeader'
 import { getList } from '../../../lib/api/client'
+import { getCurrentUser } from '../../../lib/api/session'
 import { readAudit } from '../../../lib/audit'
 import { CONFIG_RESOURCES, ConfigResource, findResource } from '../../../lib/config/resources'
+import { can } from '../../../lib/permissions'
 
 type ApiRow = Record<string, string | number | boolean | null>
 
@@ -26,6 +28,9 @@ export default async function ConfigResourcePage({ params }: { params: Promise<{
   const { resource: key } = await params
   const resource = findResource(key)
   if (!resource) notFound()
+
+  const permissions = (await getCurrentUser())?.permissions ?? []
+  if (!can(permissions, 'config.view')) redirect('/dashboard')
 
   const selectFields = resource.fields.filter(field => field.source)
   const [rows, ...sources] = await Promise.all([
@@ -58,7 +63,7 @@ export default async function ConfigResourcePage({ params }: { params: Promise<{
         ← Configuration
       </Link>
       <PageHeader title={resource.label} description={`${resource.group}. ${resource.description}.`} />
-      <ConfigTable resource={resource} rows={tableRows} options={options} />
+      <ConfigTable resource={resource} rows={tableRows} options={options} canEdit={can(permissions, 'config.edit')} />
     </>
   )
 }
