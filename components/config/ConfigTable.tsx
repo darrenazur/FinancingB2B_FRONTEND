@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import { deleteConfigRecord } from '../../app/config/actions'
+import { Audit } from '../../lib/audit'
 import { ConfigResource } from '../../lib/config/resources'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
 import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
 import StatusBadge from '../StatusBadge'
+import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
 import ConfigForm from './ConfigForm'
 
@@ -17,7 +19,7 @@ export interface FieldOption {
   parents: Record<string, number>
 }
 
-export interface ConfigRow {
+export interface ConfigRow extends Audit {
   id: number
   deleted: boolean
   values: Record<string, string>
@@ -49,7 +51,7 @@ export default function ConfigTable({ resource, rows, options }: ConfigTableProp
       text: row => (row.deleted ? 'Deleted' : 'Active'),
       render: row => <StatusBadge label={row.deleted ? 'Deleted' : 'Active'} tone={row.deleted ? 'bad' : 'good'} />,
     }
-    return [...fieldColumns, recordColumn]
+    return [...fieldColumns, recordColumn, ...auditColumns<ConfigRow>()]
   }, [resource, options])
 
   const firstField = columns[0]
@@ -67,7 +69,8 @@ export default function ConfigTable({ resource, rows, options }: ConfigTableProp
         rowKey={row => row.id}
         searchLabel={`Search ${resource.label.toLowerCase()}`}
         emptyText="No records yet."
-        minWidth="640px"
+        minWidth="1060px"
+        defaultSort={NEWEST_FIRST}
         toolbar={
           <>
             {!resource.readOnly && (

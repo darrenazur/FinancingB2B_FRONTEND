@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { FormEvent, startTransition, useActionState, useEffect, useRef, useState } from 'react'
 import { saveConfigRecord } from '../../app/config/actions'
 import { ConfigField, ConfigResource, SaveState } from '../../lib/config/resources'
+import { digitsOnly } from '../forms/FormDialog'
 import type { ConfigRow, FieldOption } from './ConfigTable'
 
 const INPUT = 'w-full rounded-xl border border-[var(--border)] bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent disabled:bg-elevated disabled:text-muted'
@@ -28,6 +29,13 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
   useEffect(() => {
     if (state.ok) onClose()
   }, [state.ok, onClose])
+
+  // Not <form action>: React resets that form after the action, which clears selects on an error.
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    startTransition(() => formAction(formData))
+  }
 
   // Picking a country clears the province and city under it.
   const select = (field: ConfigField, value: string) => {
@@ -58,7 +66,7 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
         {row ? 'Edit' : 'Add'} {resource.label}
       </h2>
 
-      <form action={formAction} className="mt-6 flex flex-col gap-5">
+      <form onSubmit={submit} className="mt-6 flex flex-col gap-5">
         {resource.fields.map(field => {
           const locked = Boolean(row && field.lockOnEdit)
           return (
@@ -80,13 +88,13 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
               ) : (
                 <input
                   name={field.name}
-                  type={field.type}
+                  type="text"
+                  inputMode={field.type === 'number' ? 'numeric' : undefined}
                   required
                   readOnly={locked}
-                  min={field.min}
                   maxLength={field.exactLength ?? field.maxLength}
                   value={selected[field.name] ?? ''}
-                  onChange={event => select(field, event.target.value)}
+                  onChange={event => select(field, field.type === 'number' ? digitsOnly(event.target.value) : event.target.value)}
                   className={`${INPUT} ${locked ? 'bg-elevated text-muted' : ''} ${field.uppercase ? 'uppercase' : ''}`}
                 />
               )}

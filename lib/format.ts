@@ -41,6 +41,17 @@ export function formatDate(value: string): string {
   })
 }
 
+export function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString('en-PH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  })
+}
+
 export function formatToday(): string {
   return new Date().toLocaleDateString('en-PH', {
     weekday: 'long',

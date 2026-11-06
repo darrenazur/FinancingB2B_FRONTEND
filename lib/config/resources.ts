@@ -28,6 +28,8 @@ export interface ConfigResource {
 export interface SaveState {
   ok: boolean
   error: string | null
+  // Shown after a successful save, when the result itself is worth reading.
+  notice?: string
 }
 
 const COUNTRY: ConfigField = {
@@ -101,6 +103,23 @@ export const CONFIG_RESOURCES: ConfigResource[] = [
     ],
     oneIntervalOnly: true,
     note: 'Intervals set the payment dates and period rate of new loans. Fill in days or months, not both.',
+  },
+  {
+    key: 'number-range',
+    label: 'Number Ranges',
+    description: 'Numbers given to partners, loans and payments',
+    group: 'Reference Data',
+    path: 'number-range',
+    idField: 'NoRangeCd',
+    fields: [
+      { name: 'NoRangeCd', label: 'Code', type: 'text' },
+      { name: 'ShortText', label: 'Description', type: 'text' },
+      { name: 'NoRangeFrom', label: 'From', type: 'text' },
+      { name: 'NoRangeTo', label: 'To', type: 'text' },
+      { name: 'CurrentNo', label: 'Current no.', type: 'text' },
+    ],
+    readOnly: true,
+    note: 'View only. The system moves the current number each time a record is saved.',
   },
   {
     key: 'country',
