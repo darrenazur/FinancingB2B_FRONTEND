@@ -27,11 +27,12 @@ interface DatePickerProps {
   name: string
   value: string
   onChange: (value: string) => void
+  min?: string
   max?: string
   required?: boolean
 }
 
-export default function DatePicker({ name, value, onChange, max, required }: DatePickerProps) {
+export default function DatePicker({ name, value, onChange, min, max, required }: DatePickerProps) {
   const today = manilaToday()
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ top: 0, left: 0 })
@@ -88,8 +89,10 @@ export default function DatePicker({ name, value, onChange, max, required }: Dat
   }
 
   const maxYear = Number((max ?? `${Number(today.slice(0, 4)) + 10}`).slice(0, 4))
-  const years = Array.from({ length: maxYear - FIRST_YEAR + 1 }, (_, index) => maxYear - index)
-  const isAllowed = (date: string) => !max || date <= max
+  const minYear = min ? Number(min.slice(0, 4)) : FIRST_YEAR
+  const years = Array.from({ length: maxYear - minYear + 1 }, (_, index) => maxYear - index)
+  const isAllowed = (date: string) => (!max || date <= max) && (!min || date >= min)
+  const firstOfView = toValue(view.year, view.month, 1)
   const lastOfView = toValue(view.year, view.month, daysIn(view.year, view.month))
 
   const move = (step: number) => {
@@ -149,7 +152,7 @@ export default function DatePicker({ name, value, onChange, max, required }: Dat
             <button
               type="button"
               onClick={() => move(-1)}
-              disabled={view.year <= FIRST_YEAR && view.month === 0}
+              disabled={min ? firstOfView <= min : view.year <= FIRST_YEAR && view.month === 0}
               aria-label="Previous month"
               className={ARROW}
             >

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { deleteConfigRecord } from '../../app/config/actions'
 import { Audit } from '../../lib/audit'
 import { ConfigResource } from '../../lib/config/resources'
+import { configLock } from '../../lib/lock'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
 import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
@@ -29,9 +30,11 @@ interface ConfigTableProps {
   resource: ConfigResource
   rows: ConfigRow[]
   options: Record<string, FieldOption[]>
+  canEdit: boolean
 }
 
-export default function ConfigTable({ resource, rows, options }: ConfigTableProps) {
+export default function ConfigTable({ resource, rows, options, canEdit }: ConfigTableProps) {
+  const editable = canEdit && !resource.readOnly
   const [editing, setEditing] = useState<ConfigRow | 'new' | null>(null)
 
   const columns = useMemo(() => {
@@ -73,7 +76,7 @@ export default function ConfigTable({ resource, rows, options }: ConfigTableProp
         defaultSort={NEWEST_FIRST}
         toolbar={
           <>
-            {!resource.readOnly && (
+            {editable && (
               <button
                 onClick={() => setEditing('new')}
                 className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
@@ -84,7 +87,7 @@ export default function ConfigTable({ resource, rows, options }: ConfigTableProp
             <RefreshButton />
           </>
         }
-        rowActions={row => !resource.readOnly && !row.deleted && (
+        rowActions={row => editable && !row.deleted && (
           <div className="flex justify-end gap-2.5">
             <button
               onClick={() => setEditing(row)}
@@ -98,6 +101,7 @@ export default function ConfigTable({ resource, rows, options }: ConfigTableProp
               title={`Delete ${lastField.text(row)}?`}
               message="The record stays on file but is marked deleted, and new records can't use it."
               action={deleteConfigRecord.bind(null, resource.key, row.id)}
+              lock={configLock(resource.path, row.id)}
             />
           </div>
         )}

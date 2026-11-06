@@ -1,7 +1,10 @@
 import 'server-only'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 
 // Server-only on purpose: ADMIN_API_KEY must never reach browser code.
 const MAX_PAGE_SIZE = 200
+const SESSION_COOKIE = 'bms_session'
 
 export class ApiError extends Error {}
 
@@ -20,19 +23,32 @@ function readConfig() {
   return { baseUrl, adminKey }
 }
 
-async function request(path: string, init?: RequestInit) {
+export async function request(path: string, init?: RequestInit) {
   const { baseUrl, adminKey } = readConfig()
+  const store = await cookies()
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+    headers: {
+      'x-admin-key': adminKey,
+      'x-session-token': store.get(SESSION_COOKIE)?.value ?? '',
+      'Content-Type': 'application/json',
+      ...init?.headers,
+    },
     cache: 'no-store',
   })
   const body = await response.json().catch(() => null)
   return { response, body }
 }
 
+// A page read with a dead session goes back to login. A temporary password goes to the change step.
+function checkSession(response: Response, body: { message?: unknown } | null) {
+  if (response.status === 401) redirect('/login?expired=1')
+  if (body?.message === 'ERR_PASSWORD_CHANGE_REQUIRED') redirect('/account/password')
+}
+
 export async function getList<T>(path: string): Promise<T[]> {
   const { response, body } = await request(path)
+  checkSession(response, body)
   if (!response.ok || body?.result !== 1) {
     throw new ApiError(`API request failed: ${path} (${response.status})`)
   }
@@ -42,6 +58,7 @@ export async function getList<T>(path: string): Promise<T[]> {
 // The API answers 400 for a record that doesn't exist, so that case returns null.
 export async function getRecord<T>(path: string): Promise<T | null> {
   const { response, body } = await request(path)
+  checkSession(response, body)
   if (response.status === 400) return null
   if (!response.ok || body?.result !== 1) {
     throw new ApiError(`API request failed: ${path} (${response.status})`)
@@ -60,6 +77,7 @@ export async function getAllPages<T>(path: string): Promise<T[]> {
 
 async function getPage<T>(path: string, page: number): Promise<PagedBody<T>> {
   const { response, body } = await request(`${path}?page=${page}&pageSize=${MAX_PAGE_SIZE}`)
+  checkSession(response, body)
   if (!response.ok || body?.result !== 1) {
     throw new ApiError(`API request failed: ${path} (${response.status})`)
   }

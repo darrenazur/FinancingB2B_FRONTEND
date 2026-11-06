@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { closeLoan, processOverdue } from '../../app/loans/actions'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
 import { compareMoney, formatDate, formatMoney } from '../../lib/format'
+import { can } from '../../lib/permissions'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
 import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
@@ -75,9 +76,10 @@ interface LoansTableProps {
   loans: Loan[]
   verifiedPartners: Option[]
   lookups: LoanLookups
+  permissions: string[]
 }
 
-export default function LoansTable({ loans, verifiedPartners, lookups }: LoansTableProps) {
+export default function LoansTable({ loans, verifiedPartners, lookups, permissions }: LoansTableProps) {
   const [form, setForm] = useState<Loan | 'new' | null>(null)
 
   return (
@@ -88,20 +90,24 @@ export default function LoansTable({ loans, verifiedPartners, lookups }: LoansTa
         rowKey={loan => loan.id}
         toolbar={
           <>
-            <button
-              onClick={() => setForm('new')}
-              className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
-            >
-              Add
-            </button>
+            {can(permissions, 'loan.add') && (
+              <button
+                onClick={() => setForm('new')}
+                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+              >
+                Add
+              </button>
+            )}
             <RefreshButton />
-            <ConfirmAction
-              label="Process overdue"
-              title="Process overdue installments?"
-              message="This marks every late installment as overdue and charges the late fee, as of today, across all open loans."
-              action={processOverdue}
-              triggerClass="rounded-xl border border-[var(--border)] bg-surface px-6 py-3 text-base font-medium text-ink hover:bg-elevated"
-            />
+            {can(permissions, 'overdue.process') && (
+              <ConfirmAction
+                label="Process overdue"
+                title="Process overdue installments?"
+                message="This marks every late installment as overdue and charges the late fee, as of today, across all open loans."
+                action={processOverdue}
+                triggerClass="rounded-xl border border-[var(--border)] bg-surface px-6 py-3 text-base font-medium text-ink hover:bg-elevated"
+              />
+            )}
           </>
         }
         searchLabel="Search loans"
@@ -115,15 +121,20 @@ export default function LoansTable({ loans, verifiedPartners, lookups }: LoansTa
             </Link>
             {!loan.closed && !loan.deleted && (
               <>
-                <button onClick={() => setForm(loan)} className={ROW_BUTTON_NEUTRAL} aria-label={`Edit loan ${loan.loanNo}`}>
-                  Edit
-                </button>
-                <ConfirmAction
-                  label="Close"
-                  title={`Close loan ${loan.loanNo}?`}
-                  message={CLOSE_LOAN_MESSAGE}
-                  action={closeLoan.bind(null, loan.id)}
-                />
+                {can(permissions, 'loan.edit') && (
+                  <button onClick={() => setForm(loan)} className={ROW_BUTTON_NEUTRAL} aria-label={`Edit loan ${loan.loanNo}`}>
+                    Edit
+                  </button>
+                )}
+                {can(permissions, 'loan.close') && (
+                  <ConfirmAction
+                    label="Close"
+                    title={`Close loan ${loan.loanNo}?`}
+                    message={CLOSE_LOAN_MESSAGE}
+                    action={closeLoan.bind(null, loan.id)}
+                    lock={{ type: 'LOAN', id: loan.id }}
+                  />
+                )}
               </>
             )}
           </div>

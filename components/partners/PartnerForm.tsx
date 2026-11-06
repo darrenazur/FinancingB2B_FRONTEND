@@ -50,6 +50,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
       title={isNew ? 'Add partner' : `Edit ${saved.firstName} ${saved.lastName}`}
       action={savePartner.bind(null, partner?.id ?? null)}
       onClose={onClose}
+      lock={partner ? { type: 'PARTNER', id: partner.id } : undefined}
       wide
     >
       <input type="hidden" name="CountryCd" value={country?.code ?? ''} />

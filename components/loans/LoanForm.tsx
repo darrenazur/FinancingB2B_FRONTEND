@@ -33,6 +33,7 @@ export default function LoanForm({ loan, partners, lookups, onClose }: LoanFormP
       title={loan ? `Edit loan ${loan.loanNo}` : 'Add loan'}
       action={saveLoan.bind(null, loan?.id ?? null, requestKey)}
       onClose={onClose}
+      lock={loan ? { type: 'LOAN', id: loan.id } : undefined}
       wide
     >
       {loan ? (

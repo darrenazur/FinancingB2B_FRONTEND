@@ -11,6 +11,7 @@ export interface Partner extends Audit {
   contactNo: string
   status: string
   hasIdNumber: boolean
+  assignedUserId: number | null
   deleted: boolean
 }
 
@@ -129,6 +130,7 @@ interface PartnerRow {
   SelfiePath: string | null
   VerificationStatus: string
   HasIDNumber: number
+  AssignedUserID: number | null
   Deleted: boolean
 }
 
@@ -227,6 +229,7 @@ export async function getPartners(): Promise<Partner[]> {
     contactNo: row.ContactNo ?? '',
     status: row.VerificationStatus,
     hasIdNumber: Boolean(row.HasIDNumber),
+    assignedUserId: row.AssignedUserID,
     deleted: Boolean(row.Deleted),
     ...readAudit(audit.get(row.PartnerProfileID) ?? {}),
   }))
@@ -335,6 +338,11 @@ export async function getLoanLookups(): Promise<LoanLookups> {
     tenures: live(tenures).map(row => ({ id: Number(row.TenureDurationID), label: `${row.Duration} months` })),
     settlements: live(settlements).map(row => ({ id: Number(row.SettlementStructID), label: String(row.Name) })),
   }
+}
+
+export async function getAssignableUsers(): Promise<Option[]> {
+  const rows = await getList<LookupRow>('/assignable-user-view')
+  return rows.map(row => ({ id: Number(row.AdminUserID), label: String(row.Username) }))
 }
 
 export async function getPartnerLookups(): Promise<PartnerLookups> {

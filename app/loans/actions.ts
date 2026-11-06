@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { send } from '../../lib/api/client'
-import { ACTOR, readableError } from '../../lib/api/messages'
+import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
 
 type Method = Parameters<typeof send>[0]
@@ -43,8 +43,8 @@ export async function saveLoan(
   }
 
   const result = id === null
-    ? await write('POST', '/financing-information-add', { ...payload, CreatedBy: ACTOR, RequestKey: requestKey })
-    : await write('PUT', '/financing-information-update', { ...payload, FinancingInformationID: id, UpdatedBy: ACTOR })
+    ? await write('POST', '/financing-information-add', { ...payload, RequestKey: requestKey })
+    : await write('PUT', '/financing-information-update', { ...payload, FinancingInformationID: id })
 
   if (!result.saved) return result.state
   refresh()
@@ -53,7 +53,7 @@ export async function saveLoan(
 
 // The API names this route "delete", but it runs CLOSEFINANCINGINFO_SP: loans are closed, never deleted.
 export async function closeLoan(id: number): Promise<SaveState> {
-  const result = await write('DELETE', '/financing-information-delete', { FinancingInformationID: id, UpdatedBy: ACTOR })
+  const result = await write('DELETE', '/financing-information-delete', { FinancingInformationID: id })
 
   if (!result.saved) return result.state
   refresh()
@@ -85,7 +85,6 @@ export async function addPayment(
     PaymentMethodID: text(formData, 'PaymentMethodID'),
     ReferenceNo: text(formData, 'ReferenceNo'),
     ProofPath: text(formData, 'ProofPath'),
-    CreatedBy: ACTOR,
     RequestKey: requestKey,
   })
 
@@ -106,7 +105,6 @@ export async function reversePayment(
   const result = await write('POST', '/payment-reverse', {
     PaymentTransactionID: paymentId,
     ReversalReason: text(formData, 'reason'),
-    CreatedBy: ACTOR,
   })
 
   if (!result.saved) return result.state
@@ -123,7 +121,6 @@ export async function waivePenalty(
   const result = await write('PUT', '/penalty-waive', {
     SettlementPenID: penaltyId,
     WaiveReason: text(formData, 'reason'),
-    UpdatedBy: ACTOR,
   })
 
   if (!result.saved) return result.state

@@ -2,6 +2,9 @@
 
 import { ChangeEvent, FormEvent, ReactNode, startTransition, useActionState, useEffect, useRef, useState } from 'react'
 import { SaveState } from '../../lib/config/resources'
+import { LockTarget } from '../../lib/lock'
+import LockNotice from './LockNotice'
+import { useRecordLock } from './useRecordLock'
 
 export const INPUT = 'w-full rounded-xl border border-[var(--border)] bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent disabled:bg-elevated disabled:text-muted'
 
@@ -58,12 +61,15 @@ interface FormDialogProps {
   action: (previous: SaveState, formData: FormData) => Promise<SaveState>
   onClose: () => void
   wide?: boolean
+  // An edit holds this record while the window is open.
+  lock?: LockTarget
   children: ReactNode
 }
 
-export default function FormDialog({ title, action, onClose, wide, children }: FormDialogProps) {
+export default function FormDialog({ title, action, onClose, wide, lock, children }: FormDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [state, formAction, pending] = useActionState(action, INITIAL)
+  const recordLock = useRecordLock(lock)
 
   useEffect(() => {
     dialogRef.current?.showModal()
@@ -88,7 +94,9 @@ export default function FormDialog({ title, action, onClose, wide, children }: F
     >
       <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
 
-      {state.ok && state.notice ? (
+      {recordLock.status !== 'held' ? (
+        <LockNotice lock={recordLock} onClose={onClose} />
+      ) : state.ok && state.notice ? (
         <>
           <p role="status" className="mt-4 text-base text-body">{state.notice}</p>
           <div className="mt-6 flex justify-end">

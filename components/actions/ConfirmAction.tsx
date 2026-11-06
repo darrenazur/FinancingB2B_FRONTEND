@@ -2,6 +2,9 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { SaveState } from '../../lib/config/resources'
+import { LockTarget } from '../../lib/lock'
+import LockNotice from '../forms/LockNotice'
+import { useRecordLock } from '../forms/useRecordLock'
 import { ROW_BUTTON_DANGER, ROW_BUTTON_NEUTRAL } from './rowButton'
 
 const INITIAL: SaveState = { ok: false, error: null }
@@ -15,10 +18,12 @@ interface ConfirmActionProps {
   // Asks for a written reason, sent as the form field "reason".
   reasonLabel?: string
   triggerClass?: string
+  // The record this action changes, held while the dialog is open.
+  lock?: LockTarget
 }
 
 // These actions change records, so they always ask first.
-export default function ConfirmAction({ label, title, message, action, reasonLabel, triggerClass }: ConfirmActionProps) {
+export default function ConfirmAction({ label, title, message, action, reasonLabel, triggerClass, lock }: ConfirmActionProps) {
   const [open, setOpen] = useState(false)
   const rowClass = label === 'Delete' ? ROW_BUTTON_DANGER : ROW_BUTTON_NEUTRAL
 
@@ -34,6 +39,7 @@ export default function ConfirmAction({ label, title, message, action, reasonLab
           message={message}
           action={action}
           reasonLabel={reasonLabel}
+          lock={lock}
           onDone={() => setOpen(false)}
         />
       )}
@@ -41,10 +47,11 @@ export default function ConfirmAction({ label, title, message, action, reasonLab
   )
 }
 
-function ConfirmDialog({ label, title, message, action, reasonLabel, onDone }: ConfirmActionProps & { onDone: () => void }) {
+function ConfirmDialog({ label, title, message, action, reasonLabel, lock, onDone }: ConfirmActionProps & { onDone: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [state, formAction, pending] = useActionState(action, INITIAL)
   const [reason, setReason] = useState('')
+  const recordLock = useRecordLock(lock)
 
   useEffect(() => {
     dialogRef.current?.showModal()
@@ -62,7 +69,9 @@ function ConfirmDialog({ label, title, message, action, reasonLabel, onDone }: C
     >
       <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
 
-      {state.ok && state.notice ? (
+      {recordLock.status !== 'held' ? (
+        <LockNotice lock={recordLock} onClose={onDone} />
+      ) : state.ok && state.notice ? (
         <>
           <p role="status" className="mt-3 text-base text-body">{state.notice}</p>
           <div className="mt-6 flex justify-end">

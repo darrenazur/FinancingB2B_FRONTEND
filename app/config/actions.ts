@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { send } from '../../lib/api/client'
-import { ACTOR, readableError } from '../../lib/api/messages'
+import { readableError } from '../../lib/api/messages'
 import { ConfigField, ConfigResource, SaveState, findResource } from '../../lib/config/resources'
 
 const MAX_INT = 2147483647
@@ -49,7 +49,7 @@ export async function deleteConfigRecord(resourceKey: string, id: number): Promi
   if (!resource || resource.readOnly) return { ok: false, error: 'This list can’t be changed here.' }
 
   try {
-    const result = await send('DELETE', `/${resource.path}-delete`, { [resource.idField]: id, UpdatedBy: ACTOR })
+    const result = await send('DELETE', `/${resource.path}-delete`, { [resource.idField]: id })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
     return { ok: false, error: 'Can’t reach the API. Check that it is running.' }
@@ -73,8 +73,8 @@ export async function saveConfigRecord(
 
   try {
     const result = id === null
-      ? await send('POST', `/${resource.path}-add`, { ...payload, CreatedBy: ACTOR })
-      : await send('PUT', `/${resource.path}-update`, { ...payload, [resource.idField]: id, UpdatedBy: ACTOR })
+      ? await send('POST', `/${resource.path}-add`, { ...payload })
+      : await send('PUT', `/${resource.path}-update`, { ...payload, [resource.idField]: id })
 
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
