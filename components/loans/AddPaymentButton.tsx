@@ -5,6 +5,7 @@ import { addPayment } from '../../app/loans/actions'
 import type { Option } from '../../lib/api/financing'
 import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
+import FileField from '../forms/FileField'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
 
 const manilaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
@@ -85,12 +86,16 @@ function PaymentForm({ loanId, loanNo, methods, due, loanDate, onClose }: AddPay
           {methods.map(method => <option key={method.id} value={method.id}>{method.label}</option>)}
         </select>
       </Field>
-      <Field label="Reference number" hint="Some methods require this and a proof path.">
+      <Field label="Reference number" hint="Some methods require this and a proof.">
         <input {...field('ReferenceNo')} maxLength={100} className={INPUT} />
       </Field>
-      <Field label="Proof path">
-        <input {...field('ProofPath')} maxLength={500} className={INPUT} />
-      </Field>
+      <FileField
+        label="Proof"
+        name="ProofPath"
+        kind="proof"
+        value={values.ProofPath}
+        onChange={key => setValues(current => ({ ...current, ProofPath: key }))}
+      />
     </FormDialog>
   )
 }
