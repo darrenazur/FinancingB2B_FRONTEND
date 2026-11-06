@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import ConfigTable, { ConfigRow, FieldOption } from '../../../components/config/ConfigTable'
 import PageHeader from '../../../components/PageHeader'
 import { getList } from '../../../lib/api/client'
+import { readAudit } from '../../../lib/audit'
 import { CONFIG_RESOURCES, ConfigResource, findResource } from '../../../lib/config/resources'
 
 type ApiRow = Record<string, string | number | boolean | null>
@@ -43,10 +44,12 @@ export default async function ConfigResourcePage({ params }: { params: Promise<{
   })
 
   // Only the configured fields reach the browser.
-  const tableRows: ConfigRow[] = rows.map(row => ({
-    id: Number(row[resource.idField]),
+  const tableRows: ConfigRow[] = rows.map((row, index) => ({
+    // Number ranges use a text code as their key, and view-only screens never send the id back.
+    id: resource.readOnly ? index + 1 : Number(row[resource.idField]),
     deleted: Boolean(row.Deleted),
     values: Object.fromEntries(resource.fields.map(field => [field.name, String(row[field.name] ?? '')])),
+    ...readAudit(row),
   }))
 
   return (

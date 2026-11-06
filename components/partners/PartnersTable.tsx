@@ -1,30 +1,48 @@
 'use client'
 
-import { deletePartner } from '../../app/partners/actions'
-import type { Partner } from '../../lib/api/financing'
-import { formatDate } from '../../lib/format'
+import { useState, useTransition } from 'react'
+import { deletePartner, loadPartner } from '../../app/partners/actions'
+import type { Partner, PartnerDetails, PartnerLookups } from '../../lib/api/financing'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
+import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
 import StatusBadge from '../StatusBadge'
+import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
+import PartnerForm from './PartnerForm'
+import VerificationAction from './VerificationAction'
+
+const STATUS_TONE: Record<string, 'good' | 'neutral' | 'bad'> = { VERIFIED: 'good', REJECTED: 'bad' }
 
 const COLUMNS: Column<Partner>[] = [
   {
     key: 'name',
     label: 'Name',
-    text: partner => `${partner.name} ID ${partner.id}`,
+    text: partner => `${partner.name} ${partner.partnerNo}`,
     render: partner => (
       <>
-        <p>{partner.name}</p>
-        <p className="text-sm font-normal text-muted">ID {partner.id}</p>
+        <p className="whitespace-nowrap">{partner.name}</p>
+        <p className="text-sm font-normal text-muted">No. {partner.partnerNo}</p>
       </>
     ),
   },
   {
-    key: 'added',
-    label: 'Added',
-    text: partner => formatDate(partner.createdAt),
-    compare: (a, b) => a.createdAt.localeCompare(b.createdAt),
+    key: 'contact',
+    label: 'Contact',
+    text: partner => `${partner.email} ${partner.contactNo}`,
+    render: partner => (
+      <>
+        <p>{partner.email}</p>
+        <p className="text-sm text-muted">{partner.contactNo}</p>
+      </>
+    ),
+  },
+  {
+    key: 'verification',
+    label: 'Verification',
+    filter: 'select',
+    text: partner => partner.status,
+    render: partner => <StatusBadge label={partner.status} tone={STATUS_TONE[partner.status] ?? 'neutral'} />,
   },
   {
     key: 'record',
@@ -33,26 +51,80 @@ const COLUMNS: Column<Partner>[] = [
     text: partner => (partner.deleted ? 'Deleted' : 'Active'),
     render: partner => <StatusBadge label={partner.deleted ? 'Deleted' : 'Active'} tone={partner.deleted ? 'bad' : 'good'} />,
   },
+  ...auditColumns<Partner>(),
 ]
 
-export default function PartnersTable({ partners }: { partners: Partner[] }) {
+interface PartnersTableProps {
+  partners: Partner[]
+  lookups: PartnerLookups
+}
+
+export default function PartnersTable({ partners, lookups }: PartnersTableProps) {
+  const [form, setForm] = useState<PartnerDetails | 'new' | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loading, startLoading] = useTransition()
+
+  const openEdit = (id: number) => {
+    setLoadError(null)
+    startLoading(async () => {
+      const details = await loadPartner(id)
+      if (details) setForm(details)
+      else setLoadError('Can’t load this partner. Refresh and try again.')
+    })
+  }
+
   return (
-    <DataTable
-      rows={partners}
-      columns={COLUMNS}
-      rowKey={partner => partner.id}
-      toolbar={<RefreshButton />}
-      searchLabel="Search partners"
-      emptyText="No partners yet."
-      minWidth="640px"
-      rowActions={partner => !partner.deleted && (
-        <ConfirmAction
-          label="Delete"
-          title={`Delete ${partner.name}?`}
-          message="The record stays on file but is marked deleted. A partner with an open loan can't be deleted."
-          action={deletePartner.bind(null, partner.id)}
+    <>
+      {loadError && <p role="alert" className="mb-4 text-base text-bad">{loadError}</p>}
+
+      <DataTable
+        rows={partners}
+        columns={COLUMNS}
+        rowKey={partner => partner.id}
+        toolbar={
+          <>
+            <button
+              onClick={() => setForm('new')}
+              className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+            >
+              Add
+            </button>
+            <RefreshButton />
+          </>
+        }
+        searchLabel="Search partners"
+        emptyText="No partners yet."
+        minWidth="1400px"
+        defaultSort={NEWEST_FIRST}
+        rowActions={partner => !partner.deleted && (
+          <div className="flex justify-end gap-2.5">
+            <VerificationAction partner={partner} />
+            <button
+              onClick={() => openEdit(partner.id)}
+              disabled={loading}
+              className={ROW_BUTTON_NEUTRAL}
+              aria-label={`Edit ${partner.name}`}
+            >
+              Edit
+            </button>
+            <ConfirmAction
+              label="Delete"
+              title={`Delete ${partner.name}?`}
+              message="The record stays on file but is marked deleted. A partner with an open loan can't be deleted."
+              action={deletePartner.bind(null, partner.id)}
+            />
+          </div>
+        )}
+      />
+
+      {form && (
+        <PartnerForm
+          key={form === 'new' ? 'new' : form.id}
+          partner={form === 'new' ? null : form}
+          lookups={lookups}
+          onClose={() => setForm(null)}
         />
       )}
-    />
+    </>
   )
 }

@@ -4,6 +4,8 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 
 const BATCH_SIZE = 50
 const COLLATOR = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
+// Actions stay in view when a wide table scrolls sideways.
+const STICKY_ACTIONS = 'sticky right-0 bg-surface shadow-[-1px_0_0_var(--border)]'
 const FILTER_INPUT = 'w-full min-w-24 rounded-lg border border-[var(--border)] bg-surface px-2.5 py-1.5 text-sm font-normal text-ink'
 
 export interface Column<Row> {
@@ -26,20 +28,21 @@ interface DataTableProps<Row> {
   searchLabel: string
   emptyText: string
   minWidth: string
+  defaultSort?: Sort
 }
 
-interface Sort {
+export interface Sort {
   key: string
   direction: 'asc' | 'desc'
 }
 
 // All rows are already in the browser, so search, filters and sort cover every row. Scrolling only adds more to the page.
 export default function DataTable<Row>({
-  rows, columns, rowKey, rowActions, toolbar, searchLabel, emptyText, minWidth,
+  rows, columns, rowKey, rowActions, toolbar, searchLabel, emptyText, minWidth, defaultSort,
 }: DataTableProps<Row>) {
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
-  const [sort, setSort] = useState<Sort | null>(null)
+  const [sort, setSort] = useState<Sort | null>(defaultSort ?? null)
   const [visible, setVisible] = useState(BATCH_SIZE)
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLTableRowElement>(null)
@@ -151,7 +154,7 @@ export default function DataTable<Row>({
                   </th>
                 )
               })}
-              {rowActions && <th className="px-5 pb-2 pt-4 font-medium"><span className="sr-only">Actions</span></th>}
+              {rowActions && <th className={`${STICKY_ACTIONS} px-5 pb-2 pt-4 font-medium`}><span className="sr-only">Actions</span></th>}
             </tr>
             <tr>
               {columns.map(column => (
@@ -177,7 +180,7 @@ export default function DataTable<Row>({
                   )}
                 </th>
               ))}
-              {rowActions && <th />}
+              {rowActions && <th className={STICKY_ACTIONS} />}
             </tr>
           </thead>
           <tbody className="divide-y divide-line text-base">
@@ -195,7 +198,7 @@ export default function DataTable<Row>({
                     {column.render ? column.render(row) : column.text(row)}
                   </td>
                 ))}
-                {rowActions && <td className="px-5 py-5 text-right">{rowActions(row)}</td>}
+                {rowActions && <td className={`${STICKY_ACTIONS} px-5 py-5 text-right`}>{rowActions(row)}</td>}
               </tr>
             ))}
             {matches.length === 0 && (

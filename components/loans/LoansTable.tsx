@@ -1,12 +1,18 @@
 'use client'
 
-import { closeLoan } from '../../app/loans/actions'
-import type { Loan } from '../../lib/api/financing'
+import Link from 'next/link'
+import { useState } from 'react'
+import { closeLoan, processOverdue } from '../../app/loans/actions'
+import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
 import { compareMoney, formatDate, formatMoney } from '../../lib/format'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
+import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
 import StatusBadge from '../StatusBadge'
+import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
+import LoanForm from './LoanForm'
+import { CLOSE_LOAN_MESSAGE } from './messages'
 
 const STATUS_TONE = { Deleted: 'bad', Closed: 'neutral', Open: 'good' } as const
 const statusLabel = (loan: Loan) => (loan.deleted ? 'Deleted' : loan.closed ? 'Closed' : 'Open')
@@ -15,11 +21,11 @@ const COLUMNS: Column<Loan>[] = [
   {
     key: 'partner',
     label: 'Partner',
-    text: loan => `${loan.partnerName} Loan ${loan.id}`,
+    text: loan => `${loan.partnerName} ${loan.loanNo}`,
     render: loan => (
       <>
         <p className="whitespace-nowrap">{loan.partnerName}</p>
-        <p className="text-sm font-normal text-muted">Loan {loan.id}</p>
+        <p className="text-sm font-normal text-muted">No. {loan.loanNo}</p>
       </>
     ),
   },
@@ -52,6 +58,7 @@ const COLUMNS: Column<Loan>[] = [
     key: 'maturity',
     label: 'Maturity',
     text: loan => formatDate(loan.maturityDate),
+    render: loan => <span className="whitespace-nowrap">{formatDate(loan.maturityDate)}</span>,
     compare: (a, b) => a.maturityDate.localeCompare(b.maturityDate),
   },
   {
@@ -61,26 +68,77 @@ const COLUMNS: Column<Loan>[] = [
     text: statusLabel,
     render: loan => <StatusBadge label={statusLabel(loan)} tone={STATUS_TONE[statusLabel(loan)]} />,
   },
+  ...auditColumns<Loan>(),
 ]
 
-export default function LoansTable({ loans }: { loans: Loan[] }) {
+interface LoansTableProps {
+  loans: Loan[]
+  verifiedPartners: Option[]
+  lookups: LoanLookups
+}
+
+export default function LoansTable({ loans, verifiedPartners, lookups }: LoansTableProps) {
+  const [form, setForm] = useState<Loan | 'new' | null>(null)
+
   return (
-    <DataTable
-      rows={loans}
-      columns={COLUMNS}
-      rowKey={loan => loan.id}
-      toolbar={<RefreshButton />}
-      searchLabel="Search loans"
-      emptyText="No loans yet."
-      minWidth="1100px"
-      rowActions={loan => !loan.closed && !loan.deleted && (
-        <ConfirmAction
-          label="Close"
-          title={`Close loan ${loan.id}?`}
-          message="A fully paid loan closes. A loan with no payments is cancelled. A partly paid or overdue loan can't be closed. This can't be undone here."
-          action={closeLoan.bind(null, loan.id)}
+    <>
+      <DataTable
+        rows={loans}
+        columns={COLUMNS}
+        rowKey={loan => loan.id}
+        toolbar={
+          <>
+            <button
+              onClick={() => setForm('new')}
+              className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+            >
+              Add
+            </button>
+            <RefreshButton />
+            <ConfirmAction
+              label="Process overdue"
+              title="Process overdue installments?"
+              message="This marks every late installment as overdue and charges the late fee, as of today, across all open loans."
+              action={processOverdue}
+              triggerClass="rounded-xl border border-[var(--border)] bg-surface px-6 py-3 text-base font-medium text-ink hover:bg-elevated"
+            />
+          </>
+        }
+        searchLabel="Search loans"
+        emptyText="No loans yet."
+        minWidth="1600px"
+        defaultSort={NEWEST_FIRST}
+        rowActions={loan => (
+          <div className="flex justify-end gap-2.5">
+            <Link href={`/loans/${loan.loanNo}`} className={ROW_BUTTON_NEUTRAL} aria-label={`View loan ${loan.loanNo}`}>
+              View
+            </Link>
+            {!loan.closed && !loan.deleted && (
+              <>
+                <button onClick={() => setForm(loan)} className={ROW_BUTTON_NEUTRAL} aria-label={`Edit loan ${loan.loanNo}`}>
+                  Edit
+                </button>
+                <ConfirmAction
+                  label="Close"
+                  title={`Close loan ${loan.loanNo}?`}
+                  message={CLOSE_LOAN_MESSAGE}
+                  action={closeLoan.bind(null, loan.id)}
+                />
+              </>
+            )}
+          </div>
+        )}
+      />
+
+      {form && (
+        <LoanForm
+          key={form === 'new' ? 'new' : form.id}
+          loan={form === 'new' ? null : form}
+          partners={verifiedPartners}
+          lookups={lookups}
+          onClose={() => setForm(null)}
         />
       )}
-    />
+    </>
   )
 }

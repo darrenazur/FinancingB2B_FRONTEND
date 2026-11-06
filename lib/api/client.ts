@@ -39,6 +39,16 @@ export async function getList<T>(path: string): Promise<T[]> {
   return body.message as T[]
 }
 
+// The API answers 400 for a record that doesn't exist, so that case returns null.
+export async function getRecord<T>(path: string): Promise<T | null> {
+  const { response, body } = await request(path)
+  if (response.status === 400) return null
+  if (!response.ok || body?.result !== 1) {
+    throw new ApiError(`API request failed: ${path} (${response.status})`)
+  }
+  return body.message as T
+}
+
 export async function getAllPages<T>(path: string): Promise<T[]> {
   const rows: T[] = []
   for (let page = 1; ; page++) {
@@ -58,5 +68,5 @@ async function getPage<T>(path: string, page: number): Promise<PagedBody<T>> {
 
 export async function send(method: 'POST' | 'PUT' | 'DELETE', path: string, payload: object) {
   const { body } = await request(path, { method, body: JSON.stringify(payload) })
-  return { ok: body?.result === 1, message: String(body?.message ?? '') }
+  return { ok: body?.result === 1, message: String(body?.message ?? ''), data: body }
 }
