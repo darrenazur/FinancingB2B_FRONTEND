@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { send } from '../../lib/api/client'
 import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
+import { t } from '../../lib/captions/t'
 
 type Method = Parameters<typeof send>[0]
 
@@ -22,7 +23,7 @@ async function write(method: Method, path: string, payload: object) {
       ? { saved: true as const, data: result.data }
       : { saved: false as const, state: { ok: false, error: readableError(result.message) } }
   } catch {
-    return { saved: false as const, state: { ok: false, error: 'Can’t reach the API. Check that it is running.' } }
+    return { saved: false as const, state: { ok: false, error: t('UI_CANT_REACH_THE_API_CHECK_THAT_IT_IS_RUNNING') } }
   }
 }
 
@@ -68,7 +69,7 @@ export async function processOverdue(): Promise<SaveState> {
   return {
     ok: true,
     error: null,
-    notice: `Installments marked overdue: ${result.data.MarkedOverdue ?? 0}. Late fees charged: ${result.data.FeesCharged ?? 0}.`,
+    notice: t('UI_INSTALLMENTS_MARKED_OVERDUE_LATE_FEES_CHARGED', { MarkedOverdue: result.data.MarkedOverdue ?? 0, FeesCharged: result.data.FeesCharged ?? 0 }),
   }
 }
 
@@ -91,7 +92,7 @@ export async function addPayment(
   if (!result.saved) return result.state
   refresh()
   if (Number(result.data.LoanFullyPaid) === 1) {
-    return { ok: true, error: null, notice: 'Payment saved. This loan is now fully paid, so it can be closed.' }
+    return { ok: true, error: null, notice: t('UI_PAYMENT_SAVED_THIS_LOAN_IS_NOW_FULLY_PAID_SO_IT_CAN_BE') }
   }
   return { ok: true, error: null }
 }

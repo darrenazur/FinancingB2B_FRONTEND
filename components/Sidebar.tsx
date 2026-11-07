@@ -5,12 +5,13 @@ import { usePathname } from 'next/navigation'
 import { logout } from '../app/login/actions'
 import type { CurrentUser } from '../lib/api/session'
 import { can } from '../lib/permissions'
+import { t } from '../lib/captions/t'
 
 const NAV = [
-  { href: '/dashboard', label: 'Overview', icon: 'M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z' },
-  { href: '/partners', label: 'Partners', permissions: ['partner.view'], icon: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 10.5a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5ZM20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.2a3.25 3.25 0 0 1 0 6.1' },
-  { href: '/loans', label: 'Loans', permissions: ['loan.view'], icon: 'M4 7h16v11H4V7Zm0 4h16M8 15h3' },
-  { href: '/config', label: 'Configuration', permissions: ['config.view', 'user.manage', 'role.manage', 'lock.release'], icon: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4' },
+  { href: '/dashboard', label: 'UI_OVERVIEW', icon: 'M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z' },
+  { href: '/partners', label: 'UI_PARTNERS', permissions: ['partner.view'], icon: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 10.5a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5ZM20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.2a3.25 3.25 0 0 1 0 6.1' },
+  { href: '/loans', label: 'UI_LOANS', permissions: ['loan.view'], icon: 'M4 7h16v11H4V7Zm0 4h16M8 15h3' },
+  { href: '/config', label: 'UI_CONFIGURATION_2', permissions: ['config.view', 'user.manage', 'role.manage', 'lock.release'], icon: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4' },
 ]
 
 interface SidebarProps {
@@ -35,7 +36,7 @@ export default function Sidebar({ user, open, onClose }: SidebarProps) {
       >
         <div className="flex items-center gap-3 px-7 pb-8 pt-9">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-lg font-bold text-white">B</div>
-          <span className="text-xl font-semibold tracking-tight text-ink">BankingMS</span>
+          <span className="text-xl font-semibold tracking-tight text-ink">{t('UI_BANKINGMS')}</span>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1.5 px-4 pb-4">
@@ -56,7 +57,7 @@ export default function Sidebar({ user, open, onClose }: SidebarProps) {
                 <svg className="h-[22px] w-[22px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d={item.icon} />
                 </svg>
-                {item.label}
+                {t(item.label)}
               </Link>
             )
           })}
@@ -69,9 +70,9 @@ export default function Sidebar({ user, open, onClose }: SidebarProps) {
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
             <form action={logout}>
-              <button type="submit" className="text-sm font-medium text-accent-strong hover:underline">Log out</button>
+              <button type="submit" className="text-sm font-medium text-accent-strong hover:underline">{t('UI_LOG_OUT')}</button>
             </form>
-            <Link href="/account/password" onClick={onClose} className="text-sm text-muted hover:underline">Password</Link>
+            <Link href="/account/password" onClick={onClose} className="text-sm text-muted hover:underline">{t('UI_PASSWORD')}</Link>
           </div>
         </div>
       </aside>

@@ -42,7 +42,12 @@ const MESSAGES: Record<string, string> = {
   ERR_FINANCING_INFO_HAS_PAYMENTS: 'This loan already has payments, so it can’t be edited.',
   ERR_FINANCING_INFO_NOT_VALID: 'This loan no longer exists.',
   ERR_FIRSTNAME_REQUIRED: 'Enter a first name.',
-  ERR_ID_IMAGE_REQUIRED: 'Enter the ID image path.',
+  ERR_CAPTION_CODE_EXISTED: 'This caption code already exists.',
+  ERR_CAPTION_CODE_NOT_VALID: 'Enter a code of up to 150 characters.',
+  ERR_CAPTION_ALREADY_DELETED: 'This caption was already deleted.',
+  ERR_CAPTION_NOT_FOUND: 'This caption no longer exists.',
+  ERR_CAPTION_TEXT_NOT_VALID: 'Enter a caption of up to 500 characters.',
+  ERR_ID_IMAGE_REQUIRED: 'Upload the ID image.',
   ERR_ID_NO1_REQUIRED: 'Enter the ID number.',
   ERR_ID_NO2_REQUIRED: 'Enter the second ID number.',
   ERR_ID_NUMBER_EXISTED: 'Another partner already uses this ID number.',
@@ -79,7 +84,7 @@ const MESSAGES: Record<string, string> = {
   ERR_PENALTY_NOT_FOUND: 'This late fee no longer exists.',
   ERR_PENALTY_NOT_UNPAID: 'Only an unpaid late fee can be waived.',
   ERR_PLEASE_RETRY: 'The system was busy. Please try again.',
-  ERR_PROOF_REQUIRED: 'This payment method needs a proof path.',
+  ERR_PROOF_REQUIRED: 'This payment method needs a proof file.',
   ERR_PROVINCE_COUNTRY_NOT_VALID: 'That province isn’t in the selected country.',
   ERR_PROVINCE_NOT_VALID: 'Choose a valid province.',
   ERR_SYSTEM_BUSY: 'The system is busy. Try again in a moment.',
@@ -98,6 +103,22 @@ const MESSAGES: Record<string, string> = {
 const GENERIC = 'This change couldn’t be saved. Check the details and try again.'
 
 // Anything without a sentence here stays generic, because it may be raw SQL text or an internal code.
+// Kept on globalThis so server actions and route handlers share one copy.
+const captionStore = globalThis as typeof globalThis & { bmsCaptions?: Record<string, string> }
+
+export function readCaption(code: string): string | undefined {
+  return captionStore.bmsCaptions?.[code]
+}
+
+export function allCaptions() {
+  return captionStore.bmsCaptions
+}
+
+export function setCaptions(captions: Record<string, string> | undefined) {
+  captionStore.bmsCaptions = captions
+}
+
+// The CAPTION table wins. The list above still answers if the API can't be reached.
 export function readableError(message: string) {
-  return MESSAGES[message] ?? GENERIC
+  return readCaption(message) ?? MESSAGES[message] ?? readCaption('UI_GENERIC_ERROR') ?? GENERIC
 }

@@ -8,6 +8,7 @@ import { digitsOnly } from '../forms/FormDialog'
 import LockNotice from '../forms/LockNotice'
 import { useRecordLock } from '../forms/useRecordLock'
 import type { ConfigRow, FieldOption } from './ConfigTable'
+import { t } from '../../lib/captions/t'
 
 const INPUT = 'w-full rounded-xl border border-[var(--border)] bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent disabled:bg-elevated disabled:text-muted'
 const INITIAL: SaveState = { ok: false, error: null }
@@ -67,7 +68,7 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
       className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-surface p-8 text-ink shadow-xl backdrop:bg-black/30"
     >
       <h2 className="text-2xl font-semibold tracking-tight">
-        {row ? 'Edit' : 'Add'} {resource.label}
+        {row ? t('UI_EDIT') : t('UI_ADD')} {t(resource.label)}
       </h2>
 
       {recordLock.status !== 'held' ? (
@@ -78,7 +79,7 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
           const locked = Boolean(row && field.lockOnEdit)
           return (
             <label key={field.name} className="flex flex-col gap-2 text-base font-medium text-body">
-              {field.label}
+              {t(field.label)}
               {field.type === 'select' ? (
                 <select
                   name={field.name}
@@ -87,7 +88,7 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
                   onChange={event => select(field, event.target.value)}
                   className={INPUT}
                 >
-                  <option value="">Select {field.label.toLowerCase()}</option>
+                  <option value="">{t('UI_SELECT')}{' '}{t(field.label).toLowerCase()}</option>
                   {choicesFor(field).map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
@@ -117,14 +118,14 @@ export default function ConfigForm({ resource, row, options, onClose }: ConfigFo
             onClick={onClose}
             className="rounded-xl px-6 py-3 text-base font-medium text-body hover:bg-elevated"
           >
-            Cancel
+            {t('UI_CANCEL')}
           </button>
           <button
             type="submit"
             disabled={pending}
             className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong disabled:opacity-60"
           >
-            {pending ? 'Saving…' : 'Save'}
+            {pending ? t('UI_SAVING') : t('UI_SAVE')}
           </button>
         </div>
       </form>

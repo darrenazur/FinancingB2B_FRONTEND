@@ -1,6 +1,7 @@
 import 'server-only'
 import { Audit, AuditRow, readAudit } from '../audit'
 import { getAllPages, getList, getRecord } from './client'
+import { t } from '../captions/t'
 
 const isFileKey = (path: string | null | undefined) => /^(partners|payments)\/[0-9a-f-]{36}$/.test(path ?? '')
 
@@ -341,7 +342,7 @@ export async function getLoanLookups(): Promise<LoanLookups> {
   return {
     currencies: live(currencies).map(row => String(row.CurrencyCd).trim()),
     terms: live(terms).map(row => ({ id: Number(row.TermTypeID), label: String(row.TermName) })),
-    tenures: live(tenures).map(row => ({ id: Number(row.TenureDurationID), label: `${row.Duration} months` })),
+    tenures: live(tenures).map(row => ({ id: Number(row.TenureDurationID), label: t('UI_MONTHS_2', { Duration: row.Duration }) })),
     settlements: live(settlements).map(row => ({ id: Number(row.SettlementStructID), label: String(row.Name) })),
   }
 }

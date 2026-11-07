@@ -6,6 +6,7 @@ import { LockTarget } from '../../lib/lock'
 import LockNotice from '../forms/LockNotice'
 import { useRecordLock } from '../forms/useRecordLock'
 import { ROW_BUTTON_DANGER, ROW_BUTTON_NEUTRAL } from './rowButton'
+import { t } from '../../lib/captions/t'
 
 const INITIAL: SaveState = { ok: false, error: null }
 const CANCEL = 'rounded-xl px-6 py-3 text-base font-medium text-body hover:bg-elevated'
@@ -25,7 +26,7 @@ interface ConfirmActionProps {
 // These actions change records, so they always ask first.
 export default function ConfirmAction({ label, title, message, action, reasonLabel, triggerClass, lock }: ConfirmActionProps) {
   const [open, setOpen] = useState(false)
-  const rowClass = label === 'Delete' ? ROW_BUTTON_DANGER : ROW_BUTTON_NEUTRAL
+  const rowClass = label === t('UI_DELETE') ? ROW_BUTTON_DANGER : ROW_BUTTON_NEUTRAL
 
   return (
     <>
@@ -75,7 +76,7 @@ function ConfirmDialog({ label, title, message, action, reasonLabel, lock, onDon
         <>
           <p role="status" className="mt-3 text-base text-body">{state.notice}</p>
           <div className="mt-6 flex justify-end">
-            <button type="button" onClick={onDone} className={CANCEL}>Close</button>
+            <button type="button" onClick={onDone} className={CANCEL}>{t('UI_CLOSE')}</button>
           </div>
         </>
       ) : (
@@ -100,13 +101,13 @@ function ConfirmDialog({ label, title, message, action, reasonLabel, lock, onDon
               </label>
             )}
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={onDone} className={CANCEL}>Cancel</button>
+              <button type="button" onClick={onDone} className={CANCEL}>{t('UI_CANCEL')}</button>
               <button
                 type="submit"
                 disabled={pending}
                 className="rounded-xl bg-[var(--red)] px-6 py-3 text-base font-medium text-white hover:opacity-90 disabled:opacity-60"
               >
-                {pending ? 'Working…' : label}
+                {pending ? t('UI_WORKING') : label}
               </button>
             </div>
           </form>

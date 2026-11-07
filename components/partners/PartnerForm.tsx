@@ -6,6 +6,7 @@ import type { PartnerDetails, PartnerLookups } from '../../lib/api/financing'
 import DatePicker from '../forms/DatePicker'
 import FileField from '../forms/FileField'
 import FormDialog, { digitsOnly, Field, INPUT, useFields } from '../forms/FormDialog'
+import { t } from '../../lib/captions/t'
 
 // The ID number hash includes the type, so one spelling per ID keeps duplicate checks working.
 const ID_TYPES = ['PASSPORT', 'DRIVERS', 'SSS', 'UMID', 'PHILSYS', 'TIN']
@@ -49,7 +50,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
 
   return (
     <FormDialog
-      title={isNew ? 'Add partner' : `Edit ${saved.firstName} ${saved.lastName}`}
+      title={isNew ? t('UI_ADD_PARTNER') : t('UI_EDIT_3', { firstName: saved.firstName, lastName: saved.lastName })}
       action={savePartner.bind(null, partner?.id ?? null)}
       onClose={onClose}
       lock={partner ? { type: 'PARTNER', id: partner.id } : undefined}
@@ -57,25 +58,25 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
     >
       <input type="hidden" name="CountryCd" value={country?.code ?? ''} />
 
-      <p className={SECTION}>Contact</p>
+      <p className={SECTION}>{t('UI_CONTACT')}</p>
       <div className={GRID}>
-        <Field label="Email">
+        <Field label={t('UI_EMAIL')}>
           <input {...field('email')} name="Email" type="email" required maxLength={100} className={INPUT} />
         </Field>
-        <Field label="Mobile number">
+        <Field label={t('UI_MOBILE_NUMBER')}>
           <input {...field('contactNo', digitsOnly)} name="ContactNo" inputMode="numeric" required maxLength={20} className={INPUT} />
         </Field>
-        <Field label="Telephone" hint={isNew ? undefined : 'A saved number can be changed, not cleared.'}>
+        <Field label={t('UI_TELEPHONE')} hint={isNew ? undefined : t('UI_A_SAVED_NUMBER_CAN_BE_CHANGED_NOT_CLEARED')}>
           <input {...field('telephoneNo', digitsOnly)} name="TelephoneNo" inputMode="numeric" maxLength={20} className={INPUT} />
         </Field>
       </div>
 
-      <p className={SECTION}>Address</p>
-      <Field label="Street address">
+      <p className={SECTION}>{t('UI_ADDRESS')}</p>
+      <Field label={t('UI_STREET_ADDRESS')}>
         <input {...field('address')} name="Address" required maxLength={200} className={INPUT} />
       </Field>
       <div className={GRID}>
-        <Field label="Country">
+        <Field label={t('UI_COUNTRY')}>
           <select
             name="CountryID"
             required
@@ -85,11 +86,11 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             }))}
             className={INPUT}
           >
-            <option value="">Select country</option>
+            <option value="">{t('UI_SELECT_COUNTRY')}</option>
             {lookups.countries.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </Field>
-        <Field label="Province">
+        <Field label={t('UI_PROVINCE')}>
           <select
             name="ProvinceID"
             required
@@ -99,11 +100,11 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             }))}
             className={INPUT}
           >
-            <option value="">Select province</option>
+            <option value="">{t('UI_SELECT_PROVINCE')}</option>
             {provinces.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </Field>
-        <Field label="City">
+        <Field label={t('UI_CITY')}>
           <select
             name="CityID"
             required
@@ -111,19 +112,19 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             onChange={event => setValues(current => ({ ...current, cityId: event.target.value, zipCodeId: '' }))}
             className={INPUT}
           >
-            <option value="">Select city</option>
+            <option value="">{t('UI_SELECT_CITY')}</option>
             {cities.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </Field>
-        <Field label="Zip code">
+        <Field label={t('UI_ZIP_CODE')}>
           <select {...field('zipCodeId')} name="ZIPCodeID" required className={INPUT}>
-            <option value="">Select zip code</option>
+            <option value="">{t('UI_SELECT_ZIP_CODE')}</option>
             {zipCodes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </Field>
       </div>
 
-      <p className={SECTION}>Identity</p>
+      <p className={SECTION}>{t('UI_IDENTITY')}</p>
       {!isNew && (
         <label className={CHECKBOX}>
           <input
@@ -133,21 +134,21 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             onChange={event => setUnlocked(event.target.checked)}
             className="mt-1 h-4 w-4"
           />
-          Change name, birth date or ID details. Any change here puts verification back to Pending.
+          {t('UI_CHANGE_NAME_BIRTH_DATE_OR_ID_DETAILS_ANY_CHANGE_HERE_PUTS')}
         </label>
       )}
       <fieldset disabled={!unlocked} className="flex flex-col gap-5">
         <div className={GRID}>
-          <Field label="First name">
+          <Field label={t('UI_FIRST_NAME')}>
             <input {...field('firstName')} name="FirstName" required maxLength={150} className={INPUT} />
           </Field>
-          <Field label="Middle name (optional)">
+          <Field label={t('UI_MIDDLE_NAME_OPTIONAL')}>
             <input {...field('middleName')} name="MiddleName" maxLength={150} className={INPUT} />
           </Field>
-          <Field label="Last name">
+          <Field label={t('UI_LAST_NAME')}>
             <input {...field('lastName')} name="LastName" required maxLength={150} className={INPUT} />
           </Field>
-          <Field label="Birth date" hint="Must be 18 or older.">
+          <Field label={t('UI_BIRTH_DATE')} hint={t('UI_MUST_BE_18_OR_OLDER')}>
             <DatePicker
               name="BirthDate"
               value={values.birthDate}
@@ -156,13 +157,13 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
               required
             />
           </Field>
-          <Field label="ID type">
+          <Field label={t('UI_ID_TYPE')}>
             <select {...field('idType1')} name="IDType1" required={isNew} className={INPUT}>
-              <option value="">Select ID type</option>
+              <option value="">{t('UI_SELECT_ID_TYPE')}</option>
               {idTypes(values.idType1).map(type => <option key={type}>{type}</option>)}
             </select>
           </Field>
-          <Field label="ID number" hint={isNew ? undefined : 'Saved numbers stay hidden. Leave blank to keep the current one.'}>
+          <Field label={t('UI_ID_NUMBER')} hint={isNew ? undefined : t('UI_SAVED_NUMBERS_STAY_HIDDEN_LEAVE_BLANK_TO_KEEP_THE_CURRENT')}>
             <input
               {...field('idNo1')}
               name="IDNo1"
@@ -174,7 +175,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             />
           </Field>
           <FileField
-            label="ID image"
+            label={t('UI_ID_IMAGE')}
             name="IDImgPath1"
             kind="id"
             value={values.idImgPath1}
@@ -183,20 +184,20 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             required={isNew}
           />
           <FileField
-            label="Selfie (optional)"
+            label={t('UI_SELFIE_OPTIONAL')}
             name="SelfiePath"
             kind="selfie"
             value={values.selfiePath}
             onChange={key => setValues(current => ({ ...current, selfiePath: key }))}
             viewHref={fileHref('selfie', values.selfiePath)}
           />
-          <Field label="Second ID type (optional)">
+          <Field label={t('UI_SECOND_ID_TYPE_OPTIONAL')}>
             <select {...field('idType2')} name="IDType2" className={INPUT}>
-              <option value="">None</option>
+              <option value="">{t('UI_NONE')}</option>
               {idTypes(values.idType2).map(type => <option key={type}>{type}</option>)}
             </select>
           </Field>
-          <Field label="Second ID number">
+          <Field label={t('UI_SECOND_ID_NUMBER')}>
             <input
               {...field('idNo2')}
               name="IDNo2"
@@ -207,7 +208,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             />
           </Field>
           <FileField
-            label="Second ID image"
+            label={t('UI_SECOND_ID_IMAGE')}
             name="IDImgPath2"
             kind="id"
             value={values.idImgPath2}
@@ -219,7 +220,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
 
       {isNew && (
         <>
-          <p className={SECTION}>Consent</p>
+          <p className={SECTION}>{t('UI_CONSENT')}</p>
           <label className={CHECKBOX}>
             <input
               type="checkbox"
@@ -229,7 +230,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
               onChange={event => setAccepted(event.target.checked)}
               className="mt-1 h-4 w-4"
             />
-            The borrower accepted the terms and conditions.
+            {t('UI_THE_BORROWER_ACCEPTED_THE_TERMS_AND_CONDITIONS')}
           </label>
           <label className={CHECKBOX}>
             <input
@@ -240,7 +241,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
               onChange={event => setConsented(event.target.checked)}
               className="mt-1 h-4 w-4"
             />
-            The borrower agreed to the use of their personal data.
+            {t('UI_THE_BORROWER_AGREED_TO_THE_USE_OF_THEIR_PERSONAL_DATA')}
           </label>
         </>
       )}

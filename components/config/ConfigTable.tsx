@@ -12,6 +12,7 @@ import StatusBadge from '../StatusBadge'
 import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
 import ConfigForm from './ConfigForm'
+import { t } from '../../lib/captions/t'
 
 export interface FieldOption {
   value: number
@@ -49,10 +50,10 @@ export default function ConfigTable({ resource, rows, options, canEdit }: Config
     }))
     const recordColumn: Column<ConfigRow> = {
       key: 'record',
-      label: 'Record',
+      label: t('UI_RECORD'),
       filter: 'select',
-      text: row => (row.deleted ? 'Deleted' : 'Active'),
-      render: row => <StatusBadge label={row.deleted ? 'Deleted' : 'Active'} tone={row.deleted ? 'bad' : 'good'} />,
+      text: row => (row.deleted ? t('UI_DELETED_2') : t('UI_ACTIVE')),
+      render: row => <StatusBadge label={row.deleted ? t('UI_DELETED_2') : t('UI_ACTIVE')} tone={row.deleted ? 'bad' : 'good'} />,
     }
     return [...fieldColumns, recordColumn, ...auditColumns<ConfigRow>()]
   }, [resource, options])
@@ -63,15 +64,15 @@ export default function ConfigTable({ resource, rows, options, canEdit }: Config
   return (
     <>
       {resource.note && (
-        <p className="mb-5 rounded-xl bg-accent-soft px-5 py-3.5 text-base text-accent-strong">{resource.note}</p>
+        <p className="mb-5 rounded-xl bg-accent-soft px-5 py-3.5 text-base text-accent-strong">{t(resource.note)}</p>
       )}
 
       <DataTable
         rows={rows}
         columns={columns}
         rowKey={row => row.id}
-        searchLabel={`Search ${resource.label.toLowerCase()}`}
-        emptyText="No records yet."
+        searchLabel={t('UI_SEARCH', { value: t(resource.label).toLowerCase() })}
+        emptyText={t('UI_NO_RECORDS_YET')}
         minWidth="1060px"
         defaultSort={NEWEST_FIRST}
         toolbar={
@@ -81,7 +82,7 @@ export default function ConfigTable({ resource, rows, options, canEdit }: Config
                 onClick={() => setEditing('new')}
                 className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
               >
-                Add
+                {t('UI_ADD')}
               </button>
             )}
             <RefreshButton />
@@ -92,14 +93,14 @@ export default function ConfigTable({ resource, rows, options, canEdit }: Config
             <button
               onClick={() => setEditing(row)}
               className={ROW_BUTTON_NEUTRAL}
-              aria-label={`Edit ${firstField.text(row)}`}
+              aria-label={t('UI_EDIT_2', { row: firstField.text(row) })}
             >
-              Edit
+              {t('UI_EDIT')}
             </button>
             <ConfirmAction
-              label="Delete"
-              title={`Delete ${lastField.text(row)}?`}
-              message="The record stays on file but is marked deleted, and new records can't use it."
+              label={t('UI_DELETE')}
+              title={t('UI_DELETE_2', { row: lastField.text(row) })}
+              message={t('UI_THE_RECORD_STAYS_ON_FILE_BUT_IS_MARKED_DELETED_AND_NEW')}
               action={deleteConfigRecord.bind(null, resource.key, row.id)}
               lock={configLock(resource.path, row.id)}
             />

@@ -1,1 +1,1 @@
-export const CLOSE_LOAN_MESSAGE = 'A fully paid loan closes. A loan with no payments is cancelled. A partly paid or overdue loan can’t be closed. This can’t be undone here.'
+export const CLOSE_LOAN_MESSAGE = 'UI_A_FULLY_PAID_LOAN_CLOSES_A_LOAN_WITH_NO_PAYMENTS_IS'

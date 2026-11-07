@@ -1,12 +1,36 @@
 import 'server-only'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { setCaptions } from './messages'
+import { t } from '../captions/t'
 
 // Server-only on purpose: ADMIN_API_KEY must never reach browser code.
 const MAX_PAGE_SIZE = 200
 const SESSION_COOKIE = 'bms_session'
+const CAPTION_LIFETIME_MS = 5 * 60_000
 
 export class ApiError extends Error {}
+
+let captionsLoadedAt = 0
+
+// The root layout calls this for every page, so captions refresh at most once in 5 minutes.
+export async function loadCaptions() {
+  if (Date.now() - captionsLoadedAt < CAPTION_LIFETIME_MS) return
+
+  try {
+    const { body } = await request('/caption-list')
+    if (body?.result !== 1) return
+
+    const rows: { CaptionCd: string; CaptionText: string; Deleted: boolean }[] = body.message
+    setCaptions(Object.fromEntries(rows.filter(row => !row.Deleted).map(row => [row.CaptionCd, row.CaptionText])))
+    captionsLoadedAt = Date.now()
+  } catch {}
+}
+
+// After an edit, the next error reads the new wording.
+export function refreshCaptions() {
+  captionsLoadedAt = 0
+}
 
 interface PagedBody<T> {
   result: number
@@ -48,7 +72,7 @@ export async function request(path: string, init?: RequestInit) {
 export async function fileResponse(path: string) {
   try {
     const response = await callApi(path)
-    if (!response.ok) return new Response('File not found', { status: 404 })
+    if (!response.ok) return new Response(t('UI_FILE_NOT_FOUND'), { status: 404 })
 
     return new Response(response.body, {
       headers: {
@@ -59,7 +83,7 @@ export async function fileResponse(path: string) {
       },
     })
   } catch {
-    return new Response('File not available', { status: 503 })
+    return new Response(t('UI_FILE_NOT_AVAILABLE'), { status: 503 })
   }
 }
 
@@ -109,5 +133,6 @@ async function getPage<T>(path: string, page: number): Promise<PagedBody<T>> {
 
 export async function send(method: 'POST' | 'PUT' | 'DELETE', path: string, payload: object) {
   const { body } = await request(path, { method, body: JSON.stringify(payload) })
+  if (body?.result !== 1) await loadCaptions()
   return { ok: body?.result === 1, message: String(body?.message ?? ''), data: body }
 }

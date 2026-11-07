@@ -4,6 +4,7 @@ import PageHeader from '../../components/PageHeader'
 import { getLoanLookups, getLoans, getPartners } from '../../lib/api/financing'
 import { getCurrentUser } from '../../lib/api/session'
 import { can } from '../../lib/permissions'
+import { t } from '../../lib/captions/t'
 
 export default async function LoansPage() {
   const permissions = (await getCurrentUser())?.permissions ?? []
@@ -20,7 +21,7 @@ export default async function LoansPage() {
 
   return (
     <>
-      <PageHeader title="Loans" description={`${loans.length} on record`} />
+      <PageHeader title={t('UI_LOANS')} description={t('UI_ON_RECORD', { count: loans.length })} />
       <LoansTable loans={loans} verifiedPartners={verifiedPartners} lookups={lookups} permissions={permissions} />
     </>
   )
