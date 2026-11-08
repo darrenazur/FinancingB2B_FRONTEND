@@ -5,9 +5,10 @@ import { send } from '../../lib/api/client'
 import { getPartnerDetails, PartnerDetails } from '../../lib/api/financing'
 import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
+import { t } from '../../lib/captions/t'
 
 const TERMS_VERSION = '1.0'
-const NOT_REACHABLE: SaveState = { ok: false, error: 'Can’t reach the API. Check that it is running.' }
+const notReachable = (): SaveState => ({ ok: false, error: t('UI_CANT_REACH_THE_API_CHECK_THAT_IT_IS_RUNNING') })
 
 const SENSITIVE_FIELDS = [
   'FirstName', 'MiddleName', 'LastName', 'BirthDate',
@@ -58,7 +59,7 @@ export async function savePartner(id: number | null, _previous: SaveState, formD
 
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
-    return NOT_REACHABLE
+    return notReachable()
   }
 
   refresh()
@@ -75,7 +76,7 @@ export async function assignPartner(id: number, _previous: SaveState, formData: 
     })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
-    return NOT_REACHABLE
+    return notReachable()
   }
 
   refresh()
@@ -90,7 +91,7 @@ export async function updateVerification(id: number, status: string): Promise<Sa
     })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
-    return NOT_REACHABLE
+    return notReachable()
   }
 
   refresh()
@@ -104,7 +105,7 @@ export async function deletePartner(id: number): Promise<SaveState> {
     })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
-    return NOT_REACHABLE
+    return notReachable()
   }
 
   refresh()

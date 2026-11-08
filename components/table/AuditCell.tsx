@@ -1,7 +1,8 @@
 import { formatDateTime } from '../../lib/format'
+import { t } from '../../lib/captions/t'
 
 export default function AuditCell({ date, by }: { date: string; by: string }) {
-  if (!date && !by) return <span className="text-muted">None</span>
+  if (!date && !by) return <span className="text-muted">{t('UI_NONE')}</span>
 
   return (
     <>

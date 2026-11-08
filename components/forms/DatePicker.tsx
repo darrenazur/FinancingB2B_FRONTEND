@@ -1,9 +1,11 @@
 'use client'
 
 import { KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { manilaToday } from '../../lib/format'
+import { t } from '../../lib/captions/t'
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const MONTHS = ['UI_JANUARY', 'UI_FEBRUARY', 'UI_MARCH', 'UI_APRIL', 'UI_MAY', 'UI_JUNE', 'UI_JULY', 'UI_AUGUST', 'UI_SEPTEMBER', 'UI_OCTOBER', 'UI_NOVEMBER', 'UI_DECEMBER']
+const WEEKDAYS = ['UI_SU', 'UI_MO', 'UI_TU', 'UI_WE', 'UI_TH', 'UI_FR', 'UI_SA']
 const PANEL_WIDTH = 320
 const PANEL_HEIGHT = 400
 const GAP = 8
@@ -16,11 +18,10 @@ const pad = (value: number) => String(value).padStart(2, '0')
 const toValue = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`
 const daysIn = (year: number, month: number) => new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
 const firstWeekday = (year: number, month: number) => new Date(Date.UTC(year, month, 1)).getUTCDay()
-const manilaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
 
 function display(value: string) {
   const [year, month, day] = value.split('-').map(Number)
-  return `${MONTHS[month - 1].slice(0, 3)} ${day}, ${year}`
+  return `${t(MONTHS[month - 1]).slice(0, 3)} ${day}, ${year}`
 }
 
 interface DatePickerProps {
@@ -133,7 +134,7 @@ export default function DatePicker({ name, value, onChange, min, max, required }
           value ? 'text-ink' : 'text-muted',
         ].join(' ')}
       >
-        {value ? display(value) : 'Select date'}
+        {value ? display(value) : t('UI_SELECT_DATE')}
         <svg className="h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
         </svg>
@@ -143,7 +144,7 @@ export default function DatePicker({ name, value, onChange, min, max, required }
         // Stops a click on empty space from reaching the label around this field, which would press the button.
         <div
           role="dialog"
-          aria-label="Choose a date"
+          aria-label={t('UI_CHOOSE_A_DATE')}
           onClick={event => event.preventDefault()}
           style={{ top: position.top, left: position.left, width: PANEL_WIDTH }}
           className="fixed z-50 rounded-2xl border border-line bg-surface p-4 font-normal shadow-xl"
@@ -153,22 +154,22 @@ export default function DatePicker({ name, value, onChange, min, max, required }
               type="button"
               onClick={() => move(-1)}
               disabled={min ? firstOfView <= min : view.year <= FIRST_YEAR && view.month === 0}
-              aria-label="Previous month"
+              aria-label={t('UI_PREVIOUS_MONTH')}
               className={ARROW}
             >
               ‹
             </button>
             <div className="flex gap-2">
               <select
-                aria-label="Month"
+                aria-label={t('UI_MONTH')}
                 value={view.month}
                 onChange={event => setView(current => ({ ...current, month: Number(event.target.value) }))}
                 className={SELECT}
               >
-                {MONTHS.map((month, index) => <option key={month} value={index}>{month.slice(0, 3)}</option>)}
+                {MONTHS.map((month, index) => <option key={month} value={index}>{t(month).slice(0, 3)}</option>)}
               </select>
               <select
-                aria-label="Year"
+                aria-label={t('UI_YEAR')}
                 value={view.year}
                 onChange={event => setView(current => ({ ...current, year: Number(event.target.value) }))}
                 className={SELECT}
@@ -180,7 +181,7 @@ export default function DatePicker({ name, value, onChange, min, max, required }
               type="button"
               onClick={() => move(1)}
               disabled={Boolean(max) && lastOfView >= (max as string)}
-              aria-label="Next month"
+              aria-label={t('UI_NEXT_MONTH')}
               className={ARROW}
             >
               ›
@@ -188,7 +189,7 @@ export default function DatePicker({ name, value, onChange, min, max, required }
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center">
-            {WEEKDAYS.map(day => <span key={day} className="py-1 text-xs font-medium text-muted">{day}</span>)}
+            {WEEKDAYS.map(day => <span key={day} className="py-1 text-xs font-medium text-muted">{t(day)}</span>)}
             {Array.from({ length: firstWeekday(view.year, view.month) }, (_, index) => <span key={index} />)}
             {Array.from({ length: daysIn(view.year, view.month) }, (_, index) => {
               const day = index + 1
@@ -216,10 +217,10 @@ export default function DatePicker({ name, value, onChange, min, max, required }
 
           <div className="mt-3 flex justify-between border-t border-line pt-3 text-sm font-medium">
             {isAllowed(today) ? (
-              <button type="button" onClick={() => pick(today)} className="text-accent-strong hover:underline">Today</button>
+              <button type="button" onClick={() => pick(today)} className="text-accent-strong hover:underline">{t('UI_TODAY')}</button>
             ) : <span />}
             {!required && value && (
-              <button type="button" onClick={() => pick('')} className="text-body hover:underline">Clear</button>
+              <button type="button" onClick={() => pick('')} className="text-body hover:underline">{t('UI_CLEAR')}</button>
             )}
           </div>
         </div>

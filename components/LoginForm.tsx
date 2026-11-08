@@ -3,6 +3,7 @@
 import { FormEvent, startTransition, useActionState, useState } from 'react'
 import { login, LoginState } from '../app/login/actions'
 import { Field, INPUT } from './forms/FormDialog'
+import { t } from '../lib/captions/t'
 
 const INITIAL: LoginState = { error: null }
 
@@ -21,14 +22,14 @@ export default function LoginForm({ expired }: { expired: boolean }) {
     <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-9">
       <div className="mb-8 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-lg font-bold text-white">B</div>
-        <span className="text-xl font-semibold tracking-tight text-ink">BankingMS</span>
+        <span className="text-xl font-semibold tracking-tight text-ink">{t('UI_BANKINGMS')}</span>
       </div>
 
-      <h1 className="text-3xl font-semibold tracking-tight text-ink">Sign in</h1>
-      {expired && !state.error && <p className="mt-3 text-base text-body">Your session ended. Sign in again.</p>}
+      <h1 className="text-3xl font-semibold tracking-tight text-ink">{t('UI_SIGN_IN')}</h1>
+      {expired && !state.error && <p className="mt-3 text-base text-body">{t('UI_YOUR_SESSION_ENDED_SIGN_IN_AGAIN')}</p>}
 
       <form onSubmit={submit} className="mt-7 flex flex-col gap-5">
-        <Field label="Username">
+        <Field label={t('UI_USERNAME')}>
           <input
             name="username"
             required
@@ -39,7 +40,7 @@ export default function LoginForm({ expired }: { expired: boolean }) {
             className={INPUT}
           />
         </Field>
-        <Field label="Password">
+        <Field label={t('UI_PASSWORD')}>
           <input
             name="password"
             type="password"
@@ -56,9 +57,9 @@ export default function LoginForm({ expired }: { expired: boolean }) {
         <button
           type="submit"
           disabled={pending}
-          className="mt-2 rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong disabled:opacity-60"
+          className="mt-2 rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover disabled:opacity-60"
         >
-          {pending ? 'Signing in…' : 'Sign in'}
+          {pending ? t('UI_SIGNING_IN') : t('UI_SIGN_IN')}
         </button>
       </form>
     </div>

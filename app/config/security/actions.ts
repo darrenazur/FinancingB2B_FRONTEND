@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { send } from '../../../lib/api/client'
 import { readableError } from '../../../lib/api/messages'
 import { SaveState } from '../../../lib/config/resources'
+import { t } from '../../../lib/captions/t'
 
 const text = (formData: FormData, name: string) => String(formData.get(name) ?? '').trim()
 
@@ -13,7 +14,7 @@ async function write(path: string, method: 'POST' | 'PUT' | 'DELETE', payload: o
     const result = await send(method, path, payload)
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
-    return { ok: false, error: 'Can’t reach the API. Check that it is running.' }
+    return { ok: false, error: t('UI_CANT_REACH_THE_API_CHECK_THAT_IT_IS_RUNNING') }
   }
 
   revalidatePath('/config/users')
@@ -60,7 +61,7 @@ export async function deleteRole(id: number): Promise<SaveState> {
 export async function changePassword(_previous: SaveState, formData: FormData): Promise<SaveState> {
   const newPassword = String(formData.get('NewPassword') ?? '')
   if (newPassword !== String(formData.get('ConfirmPassword') ?? '')) {
-    return { ok: false, error: 'The new passwords don’t match.' }
+    return { ok: false, error: t('UI_THE_NEW_PASSWORDS_DONT_MATCH') }
   }
 
   const result = await write('/auth-change-password', 'POST', {

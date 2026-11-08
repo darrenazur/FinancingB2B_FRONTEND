@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { t } from '../../lib/captions/t'
 
 const BATCH_SIZE = 50
 const COLLATOR = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
@@ -116,7 +117,7 @@ export default function DataTable<Row>({
         <div className="flex w-full items-center gap-4 sm:ml-auto sm:w-auto">
           {hasCriteria && (
             <button onClick={clearCriteria} className="whitespace-nowrap text-base font-medium text-accent-strong hover:underline">
-              Clear filters
+              {t('UI_CLEAR_FILTERS')}
             </button>
           )}
           <input
@@ -146,7 +147,7 @@ export default function DataTable<Row>({
                     className={`px-5 pb-2 pt-4 font-medium ${column.align === 'right' ? 'text-right' : ''}`}
                   >
                     <button onClick={() => toggleSort(column.key)} className="inline-flex items-center gap-1.5 hover:text-ink">
-                      {column.label}
+                      {t(column.label)}
                       <span aria-hidden="true" className={sorted ? 'text-accent-strong' : 'opacity-40'}>
                         {sorted === 'desc' ? '↓' : sorted === 'asc' ? '↑' : '↕'}
                       </span>
@@ -154,7 +155,7 @@ export default function DataTable<Row>({
                   </th>
                 )
               })}
-              {rowActions && <th className={`${STICKY_ACTIONS} px-5 pb-2 pt-4 font-medium`}><span className="sr-only">Actions</span></th>}
+              {rowActions && <th className={`${STICKY_ACTIONS} px-5 pb-2 pt-4 font-medium`}><span className="sr-only">{t('UI_ACTIONS')}</span></th>}
             </tr>
             <tr>
               {columns.map(column => (
@@ -163,18 +164,18 @@ export default function DataTable<Row>({
                     <select
                       value={filters[column.key] ?? ''}
                       onChange={event => setFilter(column.key, event.target.value)}
-                      aria-label={`Filter by ${column.label}`}
+                      aria-label={t('UI_FILTER_BY', { label: column.label })}
                       className={FILTER_INPUT}
                     >
-                      <option value="">All</option>
+                      <option value="">{t('UI_ALL')}</option>
                       {selectOptions(column).map(option => <option key={option}>{option}</option>)}
                     </select>
                   ) : (
                     <input
                       value={filters[column.key] ?? ''}
                       onChange={event => setFilter(column.key, event.target.value)}
-                      placeholder="Filter"
-                      aria-label={`Filter by ${column.label}`}
+                      placeholder={t('UI_FILTER')}
+                      aria-label={t('UI_FILTER_BY', { label: column.label })}
                       className={FILTER_INPUT}
                     />
                   )}
@@ -204,13 +205,13 @@ export default function DataTable<Row>({
             {matches.length === 0 && (
               <tr>
                 <td colSpan={columnCount} className="px-5 py-10 text-center text-muted">
-                  {rows.length === 0 ? emptyText : 'No matches.'}
+                  {rows.length === 0 ? emptyText : t('UI_NO_MATCHES')}
                 </td>
               </tr>
             )}
             {hasMore && (
               <tr ref={sentinelRef}>
-                <td colSpan={columnCount} className="px-5 py-4 text-center text-sm text-muted">Loading more…</td>
+                <td colSpan={columnCount} className="px-5 py-4 text-center text-sm text-muted">{t('UI_LOADING_MORE')}</td>
               </tr>
             )}
           </tbody>
@@ -218,8 +219,8 @@ export default function DataTable<Row>({
       </div>
 
       <p className="mt-3 text-sm text-muted" aria-live="polite">
-        Showing {shown.length} of {matches.length}
-        {matches.length === rows.length ? '' : ` matches, ${rows.length} total`}
+        {t('UI_SHOWING')}{' '}{shown.length}{' '}{t('UI_OF_2')}{' '}{matches.length}
+        {matches.length === rows.length ? '' : t('UI_MATCHES_TOTAL', { count: rows.length })}
       </p>
     </>
   )

@@ -7,6 +7,7 @@ import { getCurrentUser } from '../../../lib/api/session'
 import { readAudit } from '../../../lib/audit'
 import { CONFIG_RESOURCES, ConfigResource, findResource } from '../../../lib/config/resources'
 import { can } from '../../../lib/permissions'
+import { t } from '../../../lib/captions/t'
 
 type ApiRow = Record<string, string | number | boolean | null>
 
@@ -60,9 +61,9 @@ export default async function ConfigResourcePage({ params }: { params: Promise<{
   return (
     <>
       <Link href="/config" className="mb-4 inline-block text-base font-medium text-accent-strong hover:underline">
-        ← Configuration
+        {t('UI_CONFIGURATION')}
       </Link>
-      <PageHeader title={resource.label} description={`${resource.group}. ${resource.description}.`} />
+      <PageHeader title={t(resource.label)} description={`${t(resource.group)}. ${t(resource.description)}.`} />
       <ConfigTable resource={resource} rows={tableRows} options={options} canEdit={can(permissions, 'config.edit')} />
     </>
   )

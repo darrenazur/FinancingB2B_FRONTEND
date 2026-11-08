@@ -1,9 +1,10 @@
 import { LockState } from './useRecordLock'
+import { t } from '../../lib/captions/t'
 
 const noticeFor = (lock: LockState) => {
-  if (lock.status === 'waiting') return 'Checking who is editing this record…'
-  if (lock.status === 'lost') return 'Your edit time ended, or an administrator released this record. Your changes were not saved.'
-  if (lock.status === 'blocked' && lock.lockedBy) return `Being edited by ${lock.lockedBy}. You can still view this record.`
+  if (lock.status === 'waiting') return t('UI_CHECKING_WHO_IS_EDITING_THIS_RECORD')
+  if (lock.status === 'lost') return t('UI_YOUR_EDIT_TIME_ENDED_OR_AN_ADMINISTRATOR_RELEASED_THIS')
+  if (lock.status === 'blocked' && lock.lockedBy) return t('UI_BEING_EDITED_BY_YOU_CAN_STILL_VIEW_THIS_RECORD', { lockedBy: lock.lockedBy })
   return lock.status === 'blocked' ? lock.error : ''
 }
 
@@ -18,7 +19,7 @@ export default function LockNotice({ lock, onClose }: { lock: LockState; onClose
           onClick={onClose}
           className="rounded-xl px-6 py-3 text-base font-medium text-body hover:bg-elevated"
         >
-          Close
+          {t('UI_CLOSE')}
         </button>
       </div>
     </>

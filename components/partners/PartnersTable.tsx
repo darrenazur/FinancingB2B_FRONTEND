@@ -13,24 +13,25 @@ import DataTable, { Column } from '../table/DataTable'
 import AssignAction from './AssignAction'
 import PartnerForm from './PartnerForm'
 import VerificationAction from './VerificationAction'
+import { t } from '../../lib/captions/t'
 
 const STATUS_TONE: Record<string, 'good' | 'neutral' | 'bad'> = { VERIFIED: 'good', REJECTED: 'bad' }
 
 const COLUMNS: Column<Partner>[] = [
   {
     key: 'name',
-    label: 'Name',
+    label: 'UI_NAME',
     text: partner => `${partner.name} ${partner.partnerNo}`,
     render: partner => (
       <>
         <p className="whitespace-nowrap">{partner.name}</p>
-        <p className="text-sm font-normal text-muted">No. {partner.partnerNo}</p>
+        <p className="text-sm font-normal text-muted">{t('UI_NO')}{' '}{partner.partnerNo}</p>
       </>
     ),
   },
   {
     key: 'contact',
-    label: 'Contact',
+    label: 'UI_CONTACT',
     text: partner => `${partner.email} ${partner.contactNo}`,
     render: partner => (
       <>
@@ -41,17 +42,17 @@ const COLUMNS: Column<Partner>[] = [
   },
   {
     key: 'verification',
-    label: 'Verification',
+    label: 'UI_VERIFICATION',
     filter: 'select',
     text: partner => partner.status,
     render: partner => <StatusBadge label={partner.status} tone={STATUS_TONE[partner.status] ?? 'neutral'} />,
   },
   {
     key: 'record',
-    label: 'Record',
+    label: 'UI_RECORD',
     filter: 'select',
-    text: partner => (partner.deleted ? 'Deleted' : 'Active'),
-    render: partner => <StatusBadge label={partner.deleted ? 'Deleted' : 'Active'} tone={partner.deleted ? 'bad' : 'good'} />,
+    text: partner => (partner.deleted ? t('UI_DELETED_2') : t('UI_ACTIVE')),
+    render: partner => <StatusBadge label={partner.deleted ? t('UI_DELETED_2') : t('UI_ACTIVE')} tone={partner.deleted ? 'bad' : 'good'} />,
   },
   ...auditColumns<Partner>(),
 ]
@@ -73,7 +74,7 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
     startLoading(async () => {
       const details = await loadPartner(id)
       if (details) setForm(details)
-      else setLoadError('Can’t load this partner. Refresh and try again.')
+      else setLoadError(t('UI_CANT_LOAD_THIS_PARTNER_REFRESH_AND_TRY_AGAIN'))
     })
   }
 
@@ -90,16 +91,16 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
             {can(permissions, 'partner.add') && (
               <button
                 onClick={() => setForm('new')}
-                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover"
               >
-                Add
+                {t('UI_ADD')}
               </button>
             )}
             <RefreshButton />
           </>
         }
-        searchLabel="Search partners"
-        emptyText="No partners yet."
+        searchLabel={t('UI_SEARCH_PARTNERS')}
+        emptyText={t('UI_NO_PARTNERS_YET')}
         minWidth="1500px"
         defaultSort={NEWEST_FIRST}
         rowActions={partner => !partner.deleted && (
@@ -111,16 +112,16 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
                 onClick={() => openEdit(partner.id)}
                 disabled={loading}
                 className={ROW_BUTTON_NEUTRAL}
-                aria-label={`Edit ${partner.name}`}
+                aria-label={t('UI_EDIT_4', { name: partner.name })}
               >
-                Edit
+                {t('UI_EDIT')}
               </button>
             )}
             {can(permissions, 'partner.delete') && (
               <ConfirmAction
-                label="Delete"
-                title={`Delete ${partner.name}?`}
-                message="The record stays on file but is marked deleted. A partner with an open loan can't be deleted."
+                label={t('UI_DELETE')}
+                title={t('UI_DELETE_3', { name: partner.name })}
+                message={t('UI_THE_RECORD_STAYS_ON_FILE_BUT_IS_MARKED_DELETED_A_PARTNER')}
                 action={deletePartner.bind(null, partner.id)}
                 lock={{ type: 'PARTNER', id: partner.id }}
               />

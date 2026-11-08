@@ -8,15 +8,16 @@ import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
 import StatusBadge from '../StatusBadge'
 import DataTable, { Column } from '../table/DataTable'
+import { t } from '../../lib/captions/t'
 
 const recordLabel = (lock: RecordLock) => `${lock.kind} ${lock.recordName}`.trim()
-const statusLabel = (lock: RecordLock) => (lock.active ? 'Active' : 'Ended')
+const statusLabel = (lock: RecordLock) => (lock.active ? t('UI_ACTIVE') : t('UI_ENDED'))
 
 const COLUMNS: Column<RecordLock>[] = [
-  { key: 'record', label: 'Record', text: recordLabel },
+  { key: 'record', label: 'UI_RECORD', text: recordLabel },
   {
     key: 'holder',
-    label: 'Held by',
+    label: 'UI_HELD_BY',
     text: lock => `${lock.holderName} ${lock.holderUsername}`.trim(),
     render: lock => (
       <>
@@ -27,19 +28,19 @@ const COLUMNS: Column<RecordLock>[] = [
   },
   {
     key: 'since',
-    label: 'Since',
+    label: 'UI_SINCE',
     text: lock => formatDateTime(lock.lockedAt),
     compare: (a, b) => a.lockedAt.localeCompare(b.lockedAt),
   },
   {
     key: 'until',
-    label: 'Until',
+    label: 'UI_UNTIL',
     text: lock => formatDateTime(lock.expiresAt),
     compare: (a, b) => a.expiresAt.localeCompare(b.expiresAt),
   },
   {
     key: 'status',
-    label: 'Status',
+    label: 'UI_STATUS',
     filter: 'select',
     text: statusLabel,
     render: lock => <StatusBadge label={statusLabel(lock)} tone={lock.active ? 'good' : 'bad'} />,
@@ -55,16 +56,16 @@ export default function LocksTable({ locks }: { locks: RecordLock[] }) {
       columns={COLUMNS}
       rowKey={lock => lock.key}
       defaultSort={{ key: 'since', direction: 'desc' }}
-      searchLabel="Search locks"
-      emptyText="No records are locked."
+      searchLabel={t('UI_SEARCH_LOCKS')}
+      emptyText={t('UI_NO_RECORDS_ARE_LOCKED')}
       minWidth="1000px"
       toolbar={<RefreshButton />}
       rowActions={lock => (
         <div className="flex justify-end">
           <ConfirmAction
-            label="Release"
-            title={`Release ${recordLabel(lock)}?`}
-            message="If someone is editing this record, their window closes and their unsaved changes are lost."
+            label={t('UI_RELEASE')}
+            title={t('UI_RELEASE_2', { lock: recordLabel(lock) })}
+            message={t('UI_IF_SOMEONE_IS_EDITING_THIS_RECORD_THEIR_WINDOW_CLOSES_AND')}
             action={release(lock)}
           />
         </div>

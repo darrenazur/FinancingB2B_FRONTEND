@@ -3,9 +3,11 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { SaveState } from '../../lib/config/resources'
 import { LockTarget } from '../../lib/lock'
+import DatePicker from '../forms/DatePicker'
 import LockNotice from '../forms/LockNotice'
 import { useRecordLock } from '../forms/useRecordLock'
 import { ROW_BUTTON_DANGER, ROW_BUTTON_NEUTRAL } from './rowButton'
+import { t } from '../../lib/captions/t'
 
 const INITIAL: SaveState = { ok: false, error: null }
 const CANCEL = 'rounded-xl px-6 py-3 text-base font-medium text-body hover:bg-elevated'
@@ -17,15 +19,19 @@ interface ConfirmActionProps {
   action: (previous: SaveState, formData: FormData) => Promise<SaveState>
   // Asks for a written reason, sent as the form field "reason".
   reasonLabel?: string
+  // Asks for a date, sent as the form field "date". It starts at dateMax.
+  dateLabel?: string
+  dateMin?: string
+  dateMax?: string
   triggerClass?: string
   // The record this action changes, held while the dialog is open.
   lock?: LockTarget
 }
 
 // These actions change records, so they always ask first.
-export default function ConfirmAction({ label, title, message, action, reasonLabel, triggerClass, lock }: ConfirmActionProps) {
+export default function ConfirmAction({ label, title, message, action, reasonLabel, dateLabel, dateMin, dateMax, triggerClass, lock }: ConfirmActionProps) {
   const [open, setOpen] = useState(false)
-  const rowClass = label === 'Delete' ? ROW_BUTTON_DANGER : ROW_BUTTON_NEUTRAL
+  const rowClass = label === t('UI_DELETE') ? ROW_BUTTON_DANGER : ROW_BUTTON_NEUTRAL
 
   return (
     <>
@@ -39,6 +45,9 @@ export default function ConfirmAction({ label, title, message, action, reasonLab
           message={message}
           action={action}
           reasonLabel={reasonLabel}
+          dateLabel={dateLabel}
+          dateMin={dateMin}
+          dateMax={dateMax}
           lock={lock}
           onDone={() => setOpen(false)}
         />
@@ -47,10 +56,11 @@ export default function ConfirmAction({ label, title, message, action, reasonLab
   )
 }
 
-function ConfirmDialog({ label, title, message, action, reasonLabel, lock, onDone }: ConfirmActionProps & { onDone: () => void }) {
+function ConfirmDialog({ label, title, message, action, reasonLabel, dateLabel, dateMin, dateMax, lock, onDone }: ConfirmActionProps & { onDone: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [state, formAction, pending] = useActionState(action, INITIAL)
   const [reason, setReason] = useState('')
+  const [date, setDate] = useState(dateMax ?? '')
   const recordLock = useRecordLock(lock)
 
   useEffect(() => {
@@ -75,7 +85,7 @@ function ConfirmDialog({ label, title, message, action, reasonLabel, lock, onDon
         <>
           <p role="status" className="mt-3 text-base text-body">{state.notice}</p>
           <div className="mt-6 flex justify-end">
-            <button type="button" onClick={onDone} className={CANCEL}>Close</button>
+            <button type="button" onClick={onDone} className={CANCEL}>{t('UI_CLOSE')}</button>
           </div>
         </>
       ) : (
@@ -85,6 +95,12 @@ function ConfirmDialog({ label, title, message, action, reasonLabel, lock, onDon
           {state.error && <p role="alert" className="mt-4 text-base text-bad">{state.error}</p>}
 
           <form action={formAction} className="mt-6">
+            {dateLabel && (
+              <div className="mb-6 flex flex-col gap-2 text-base font-medium text-body">
+                {dateLabel}
+                <DatePicker name="date" value={date} onChange={setDate} min={dateMin} max={dateMax} required />
+              </div>
+            )}
             {reasonLabel && (
               <label className="mb-6 flex flex-col gap-2 text-base font-medium text-body">
                 {reasonLabel}
@@ -100,13 +116,13 @@ function ConfirmDialog({ label, title, message, action, reasonLabel, lock, onDon
               </label>
             )}
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={onDone} className={CANCEL}>Cancel</button>
+              <button type="button" onClick={onDone} className={CANCEL}>{t('UI_CANCEL')}</button>
               <button
                 type="submit"
                 disabled={pending}
                 className="rounded-xl bg-[var(--red)] px-6 py-3 text-base font-medium text-white hover:opacity-90 disabled:opacity-60"
               >
-                {pending ? 'Working…' : label}
+                {pending ? t('UI_WORKING') : label}
               </button>
             </div>
           </form>

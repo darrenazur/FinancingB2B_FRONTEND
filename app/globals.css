@@ -21,6 +21,78 @@
   --red:    #b91c1c;
   --amber:  #b45309;
   --purple: #7e22ce;
+
+  /* Soft fills behind good and bad states, and the line around a warning */
+  --green-soft: #f0fdf4;
+  --red-soft:   #fef2f2;
+  --red-line:   #fecaca;
+  /* A primary button when hovered */
+  --blue-hover: #1d4ed8;
+
+  color-scheme: light;
+}
+
+/* Dark: chosen in the sidebar (data-theme="dark"), or the device setting when no theme is chosen */
+:root[data-theme="dark"] {
+  --bg-base:        #0f1115;
+  --bg-surface:     #171a21;
+  --bg-elevated:    #1f232c;
+  --bg-hover:       #272c37;
+  --border:         #343b48;
+  --border-subtle:  #272d38;
+
+  --blue-primary:   #3b82f6;
+  --blue-light:     #7cacf8;
+  --blue-dim:       #1e3a8a;
+  --blue-glow:      #172554;
+
+  --text-primary:   #e6e8ec;
+  --text-secondary: #b6bcc8;
+  --text-muted:     #8c94a4;
+
+  --green:  #4ade80;
+  --red:    #f87171;
+  --amber:  #fbbf24;
+  --purple: #c084fc;
+
+  --green-soft: #0f2a1a;
+  --red-soft:   #3a1414;
+  --red-line:   #7f1d1d;
+  --blue-hover: #2563eb;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-base:        #0f1115;
+    --bg-surface:     #171a21;
+    --bg-elevated:    #1f232c;
+    --bg-hover:       #272c37;
+    --border:         #343b48;
+    --border-subtle:  #272d38;
+
+    --blue-primary:   #3b82f6;
+    --blue-light:     #7cacf8;
+    --blue-dim:       #1e3a8a;
+    --blue-glow:      #172554;
+
+    --text-primary:   #e6e8ec;
+    --text-secondary: #b6bcc8;
+    --text-muted:     #8c94a4;
+
+    --green:  #4ade80;
+    --red:    #f87171;
+    --amber:  #fbbf24;
+    --purple: #c084fc;
+
+    --green-soft: #0f2a1a;
+    --red-soft:   #3a1414;
+    --red-line:   #7f1d1d;
+    --blue-hover: #2563eb;
+
+    color-scheme: dark;
+  }
 }
 
 @theme inline {
@@ -36,6 +108,10 @@
   --color-accent-soft: var(--blue-glow);
   --color-good: var(--green);
   --color-bad: var(--red);
+  --color-good-soft: var(--green-soft);
+  --color-bad-soft: var(--red-soft);
+  --color-bad-line: var(--red-line);
+  --color-accent-hover: var(--blue-hover);
 }
 
 html { font-size: 17px; }

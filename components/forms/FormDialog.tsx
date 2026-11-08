@@ -5,6 +5,7 @@ import { SaveState } from '../../lib/config/resources'
 import { LockTarget } from '../../lib/lock'
 import LockNotice from './LockNotice'
 import { useRecordLock } from './useRecordLock'
+import { t } from '../../lib/captions/t'
 
 export const INPUT = 'w-full rounded-xl border border-[var(--border)] bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent disabled:bg-elevated disabled:text-muted'
 
@@ -100,8 +101,8 @@ export default function FormDialog({ title, action, onClose, wide, lock, childre
         <>
           <p role="status" className="mt-4 text-base text-body">{state.notice}</p>
           <div className="mt-6 flex justify-end">
-            <button type="button" onClick={onClose} className={`${BUTTON} bg-accent text-white hover:bg-accent-strong`}>
-              Close
+            <button type="button" onClick={onClose} className={`${BUTTON} bg-accent text-white hover:bg-accent-hover`}>
+              {t('UI_CLOSE')}
             </button>
           </div>
         </>
@@ -113,14 +114,14 @@ export default function FormDialog({ title, action, onClose, wide, lock, childre
 
           <div className="mt-2 flex justify-end gap-3">
             <button type="button" onClick={onClose} className={`${BUTTON} text-body hover:bg-elevated`}>
-              Cancel
+              {t('UI_CANCEL')}
             </button>
             <button
               type="submit"
               disabled={pending}
-              className={`${BUTTON} bg-accent text-white hover:bg-accent-strong disabled:opacity-60`}
+              className={`${BUTTON} bg-accent text-white hover:bg-accent-hover disabled:opacity-60`}
             >
-              {pending ? 'Saving…' : 'Save'}
+              {pending ? t('UI_SAVING') : t('UI_SAVE')}
             </button>
           </div>
         </form>

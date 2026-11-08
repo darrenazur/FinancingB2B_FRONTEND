@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
+import { t } from '../../lib/captions/t'
 
 // The icon spins in place: the page stays readable while new data loads, so no dialog is needed.
 export default function RefreshButton() {
@@ -27,7 +28,7 @@ export default function RefreshButton() {
       >
         <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />
       </svg>
-      Refresh
+      {t('UI_REFRESH')}
     </button>
   )
 }

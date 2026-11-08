@@ -5,8 +5,9 @@ import { send } from '../../lib/api/client'
 import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
 import { LockTarget } from '../../lib/lock'
+import { t } from '../../lib/captions/t'
 
-const NO_API = 'Can’t reach the API. Check that it is running.'
+const noApi = () => t('UI_CANT_REACH_THE_API_CHECK_THAT_IT_IS_RUNNING')
 const payload = (target: LockTarget) => ({ EntityType: target.type, EntityID: target.id })
 
 export interface TakeLockResult {
@@ -22,7 +23,7 @@ export async function takeLock(target: LockTarget): Promise<TakeLockResult> {
     if (result.message === 'ERR_RECORD_LOCKED') return { ok: false, lockedBy: String(result.data?.lockedBy ?? '') }
     return { ok: false, error: readableError(result.message) }
   } catch {
-    return { ok: false, error: NO_API }
+    return { ok: false, error: noApi() }
   }
 }
 
@@ -56,7 +57,7 @@ export async function forceReleaseLock(target: LockTarget): Promise<SaveState> {
     const result = await send('POST', '/lock-force-release', payload(target))
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {
-    return { ok: false, error: NO_API }
+    return { ok: false, error: noApi() }
   }
 
   revalidatePath('/config/locks')
