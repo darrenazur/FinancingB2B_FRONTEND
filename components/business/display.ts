@@ -27,6 +27,7 @@ export function displayValue(kind: BizColumnKind, value: string): string {
     case 'percent': return `${trimNumber(value)}%`
     case 'number': return trimNumber(value)
     case 'inout': return value === 'IN' ? t('UI_IN') : t('UI_OUT')
+    case 'capitalType': return value === 'RET' ? t('UI_OPENING_PROFIT') : value === 'IN' ? t('UI_IN') : t('UI_OUT')
     default: return value
   }
 }

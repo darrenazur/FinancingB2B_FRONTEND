@@ -1,9 +1,9 @@
 // The Business screens. Each one is a list from /biz-view/{entity}, saved through /biz-save/{entity}.
 // Field names match the API and its procedures; the API checks every value again.
 
-export type BizFieldType = 'money' | 'rate' | 'date' | 'futureDate' | 'month' | 'int' | 'text' | 'longtext' | 'select' | 'inout' | 'checkbox'
+export type BizFieldType = 'money' | 'rate' | 'date' | 'futureDate' | 'month' | 'int' | 'text' | 'longtext' | 'select' | 'inout' | 'capitalType' | 'checkbox'
 export type BizSource = 'fund' | 'bankLoan' | 'category' | 'agent' | 'investor' | 'cbf' | 'cbfLoan'
-export type BizColumnKind = 'text' | 'number' | 'money' | 'date' | 'month' | 'percent' | 'inout' | 'opening' | 'paidOff' | 'cbfStatus' | 'risk'
+export type BizColumnKind = 'text' | 'number' | 'money' | 'date' | 'month' | 'percent' | 'inout' | 'capitalType' | 'opening' | 'paidOff' | 'cbfStatus' | 'risk'
 
 export interface BizField {
   name: string
@@ -56,13 +56,14 @@ export const BIZ_RESOURCES: BizResource[] = [
     sources: [],
     fields: [
       { name: 'TxnDate', label: 'UI_DATE', type: 'date', required: true },
-      { name: 'TxnType', label: 'UI_IN_OR_OUT', type: 'inout', required: true },
+      // IN, OUT, or RET: profit kept from before this system (one only)
+      { name: 'TxnType', label: 'UI_CAPITAL_TYPE', type: 'capitalType', required: true },
       { name: 'Amount', label: 'UI_AMOUNT', type: 'money', required: true },
       remarks,
     ],
     columns: [
       { name: 'TxnDate', label: 'UI_DATE', kind: 'date' },
-      { name: 'TxnType', label: 'UI_IN_OR_OUT', kind: 'inout' },
+      { name: 'TxnType', label: 'UI_CAPITAL_TYPE', kind: 'capitalType' },
       { name: 'Amount', label: 'UI_AMOUNT', kind: 'money' },
       { name: 'Remarks', label: 'UI_REMARKS', kind: 'text' },
     ],

@@ -32,7 +32,7 @@ function startValue(field: BizField, row: BizRow | null, today: string): string 
     return saved
   }
   if (field.type === 'date') return today
-  if (field.type === 'inout') return 'IN'
+  if (field.type === 'inout' || field.type === 'capitalType') return 'IN'
   return ''
 }
 
@@ -82,6 +82,14 @@ export default function BizForm({ resource, row, title, options, onClose }: BizF
           <select {...common} onChange={event => set(field.name, event.target.value)} className={INPUT}>
             <option value="IN">{t('UI_IN')}</option>
             <option value="OUT">{t('UI_OUT')}</option>
+          </select>
+        )
+      case 'capitalType':
+        return (
+          <select {...common} onChange={event => set(field.name, event.target.value)} className={INPUT}>
+            <option value="IN">{t('UI_IN')}</option>
+            <option value="OUT">{t('UI_OUT')}</option>
+            <option value="RET">{t('UI_OPENING_PROFIT')}</option>
           </select>
         )
       case 'checkbox':

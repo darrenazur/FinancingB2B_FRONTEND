@@ -1,10 +1,14 @@
 // Projection of the months ahead, from the latest actual month and the projection settings.
 // Money is worked in whole centavos as BigInt, so no float rounding creeps in month after month.
 //
-// Each month:
+// Each month (accrual, like the owner's sheet: a loan earns from the month after it is released):
 //   reserves  = last reserves + emergency fund a month
-//   portfolio = (capital - reserves) x target utilization
-//   gross     = portfolio x interest %
+//   booked    = this month's portfolio less principal due from this month on (past-due principal stays, earning nothing)
+//   new       = (capital - reserves) x target utilization - booked, never below 0
+//   portfolio = booked + new
+//   gross     = interest due this month on booked loans + last month's new lending x interest %
+//               (the first month has no new lending from the month before: those loans are already booked)
+//   interest % = the setting; 0 = the active loans' contract rate; no active loans = last 3 months collected
 //   costs     = owner salary + overhead + other + agent fixed pay + commission + bank interest
 //   net       = gross - costs; cash flow = net - bank principal
 //   capital   = last capital + net - bank principal   (own capital + retained profit + bank debt left)
@@ -61,6 +65,10 @@ const monthStart = (index: number) => `${Math.floor(index / 12)}-${String((index
 export interface ProjectionInput {
   // Actual months from the monthly report, newest first
   months: Row[]
+  // Loans already booked, per due month: principal still to collect and interest due
+  schedule: Row[]
+  // Monthly % of active loans, weighted by amount ('' when none)
+  contractRatePct: string
   agentMonths: Row[]
   settings: Record<string, string>
   bankLoans: Row[]
@@ -77,7 +85,7 @@ export interface Assumptions {
   monthsAhead: number
   utilizationPct: string
   interestPct: string
-  interestFromHistory: boolean
+  interestSource: 'setting' | 'loans' | 'history'
   commissionPct: string
   agentFixed: string
   ownerSalary: string
@@ -101,10 +109,23 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
   const historyInterest = historyMonths.reduce((sum, row) => sum + cents(row.InterestIncome), ZERO)
   const historyPortfolio = historyMonths.reduce((sum, row) => sum + cents(row.Portfolio), ZERO)
   const settingInterest = pct(input.settings.PROJ_INTEREST_PCT)
-  const interestFromHistory = settingInterest === ZERO
-  const interestPct = interestFromHistory
-    ? (historyPortfolio > ZERO ? historyInterest * HUNDRED * PCT_SCALE / historyPortfolio : ZERO)
-    : settingInterest
+  const contractInterest = pct(input.contractRatePct)
+  const interestSource = settingInterest > ZERO ? 'setting' : contractInterest > ZERO ? 'loans' : 'history'
+  const interestPct = interestSource === 'setting' ? settingInterest
+    : interestSource === 'loans' ? contractInterest
+    : (historyPortfolio > ZERO ? historyInterest * HUNDRED * PCT_SCALE / historyPortfolio : ZERO)
+
+  // Booked loans per due month (index), from the base month on
+  const baseMonth = monthIndex(base.MonthStart)
+  const scheduled = new Map<number, { principal: bigint; interest: bigint }>()
+  for (const row of input.schedule) {
+    const month = monthIndex(row.MonthStart ?? '')
+    if (month < baseMonth) continue
+    scheduled.set(month, { principal: cents(row.PrincipalDue), interest: cents(row.InterestDue) })
+  }
+  // Principal due in the base month is taken as collected in it
+  let booked = cents(base.Portfolio) - (scheduled.get(baseMonth)?.principal ?? ZERO)
+  let lastNew = ZERO
 
   // Each agent's share of the interest collected in the same months, and their rates oldest first.
   const historyStarts = new Set(historyMonths.map(row => row.MonthStart))
@@ -163,6 +184,7 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
   let reserves = cents(base.Reserves)
   let bankDebt = cents(base.BankDebt)
   let investorDebt = cents(base.InvestorDebt)
+  let prevPortfolio = cents(base.Portfolio)
   const rows: Row[] = []
   // Shown in the assumptions: the first projected month's agent pay
   let firstAgentFixed = ZERO
@@ -192,8 +214,12 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
 
     reserves += emergencyMonthly
     const usable = capital - reserves
-    const portfolio = max(ZERO, times(usable, utilizationPct))
-    const gross = times(portfolio, interestPct)
+    const due = scheduled.get(month)
+    booked = max(ZERO, booked - (due?.principal ?? ZERO))
+    const newLending = max(ZERO, times(usable, utilizationPct) - booked)
+    const portfolio = booked + newLending
+    const gross = (due?.interest ?? ZERO) + times(lastNew, interestPct)
+    lastNew = newLending
     const agentPay = agentPayFor(month, gross)
     const agentSalary = agentPay.fixed + agentPay.commission
     if (step === 1) {
@@ -210,7 +236,8 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
       Portfolio: text(portfolio),
       UtilizationPct: usable > ZERO ? pctText(portfolio * HUNDRED * PCT_SCALE / usable) : '',
       InterestIncome: text(gross),
-      IncomePct: pctText(interestPct),
+      // Gross profit over the portfolio it came from: the month before's (the first month: the base month's)
+      IncomePct: prevPortfolio > ZERO ? pctText(gross * HUNDRED * PCT_SCALE / prevPortfolio) : '',
       OwnerSalary: text(ownerSalary),
       AgentSalary: text(agentSalary),
       Overhead: text(overhead),
@@ -227,6 +254,7 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
       InvestorDebt: text(max(ZERO, investorDebt)),
     })
 
+    prevPortfolio = portfolio
     bankDebt = max(ZERO, bankDebt - bankPrincipal)
     capital += netProfit - bankPrincipal - investorPrincipal
   }
@@ -238,7 +266,7 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
       monthsAhead,
       utilizationPct: pctText(utilizationPct),
       interestPct: pctText(interestPct),
-      interestFromHistory,
+      interestSource,
       commissionPct: pctText(firstCommissionPct),
       agentFixed: text(firstAgentFixed),
       ownerSalary: text(ownerSalary),

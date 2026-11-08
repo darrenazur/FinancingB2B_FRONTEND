@@ -116,11 +116,14 @@ export const getStatementBanks = () => report('statement-bank')
 
 // Everything the projection reads, as exact text.
 export async function getProjectionInput() {
-  const [months, agentMonths, settings, bankLoans, agents, agentRates, contracts] = await Promise.all([
+  const [months, agentMonths, settings, bankLoans, agents, agentRates, contracts, schedule, loanRate] = await Promise.all([
     report('monthly'), report('agent-monthly'), report('setting'), report('bank-loan'), report('agent'), report('agent-pay'), report('cbf'),
+    report('schedule'), report('loan-rate'),
   ])
   return {
     months,
+    schedule,
+    contractRatePct: loanRate[0]?.ContractRatePct ?? '',
     agentMonths,
     settings: Object.fromEntries(settings.map(row => [row.SettingCd ?? '', row.SettingValue ?? ''])),
     bankLoans,

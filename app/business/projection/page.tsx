@@ -43,7 +43,7 @@ export default async function ProjectionPage() {
     ['UI_PROJ_START', formatMonth(a.startMonth)],
     ['UI_PROJ_MONTHS', String(a.monthsAhead)],
     ['UI_PROJ_UTILIZATION', `${trimNumber(a.utilizationPct)}%`],
-    ['UI_PROJ_INTEREST', `${trimNumber(a.interestPct)}% ${t(a.interestFromHistory ? 'UI_PROJ_FROM_HISTORY' : 'UI_PROJ_FROM_SETTING')}`],
+    ['UI_PROJ_INTEREST', `${trimNumber(a.interestPct)}% ${t(a.interestSource === 'setting' ? 'UI_PROJ_FROM_SETTING' : a.interestSource === 'loans' ? 'UI_PROJ_FROM_LOANS' : 'UI_PROJ_FROM_HISTORY')}`],
     ['UI_PROJ_COMMISSION', `${trimNumber(a.commissionPct)}%`],
     ['UI_PROJ_AGENT_FIXED', formatMoney(a.agentFixed)],
     ['UI_OWNER_SALARY', formatMoney(a.ownerSalary)],
@@ -72,7 +72,7 @@ export default async function ProjectionPage() {
               </div>
             ))}
           </dl>
-          <p className="mt-4 text-sm text-muted">{t('UI_PROJ_NOTE_2')}</p>
+          <p className="mt-4 text-sm text-muted">{t('UI_PROJ_NOTE_3')}</p>
           <Link href="/business/setting" className="mt-3 inline-block text-base font-medium text-accent-strong hover:underline">
             {t('UI_PROJ_CHANGE_SETTINGS')}
           </Link>

@@ -94,6 +94,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     { label: t('UI_OWNERS_EQUITY'), kind: 'heading' },
     { label: t('UI_BEGINNING_EQUITY'), value: row.BeginningEquity },
     { label: t('UI_ADDITIONAL_CAPITAL'), value: row.CapitalAdded },
+    ...optional('UI_OPENING_PROFIT', row.OpeningProfitAdded),
     { label: t('UI_LESS_WITHDRAWALS'), value: row.Withdrawals },
     { label: t('UI_NET_PROFIT'), value: row.NetProfit },
     { label: t('UI_TOTAL_EQUITY'), value: row.EndingEquity, kind: 'total' },
@@ -105,6 +106,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     { label: t('UI_PLUS_NET_PROFIT'), value: row.NetProfit },
     { label: t('UI_LESS_WITHDRAWALS'), value: row.Withdrawals },
     { label: t('UI_PLUS_ADDITIONAL_CAPITAL'), value: row.CapitalAdded },
+    ...optional('UI_PLUS_OPENING_PROFIT', row.OpeningProfitAdded),
     { label: t('UI_ENDING_EQUITY'), value: row.EndingEquity, kind: 'grand' },
   ]
 
@@ -112,6 +114,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     { label: t('UI_BEGINNING_CASH'), value: row.BeginningCash, kind: 'total' },
     { label: t('UI_INFLOWS'), kind: 'heading' },
     { label: t('UI_CAPITAL_ADDED'), value: row.CashCapitalIn },
+    ...optional('UI_OPENING_PROFIT', row.CashOpeningProfit),
     { label: t('UI_BANK_LOANS_RECEIVED'), value: row.CashBankLoanReceived },
     { label: t('UI_PRINCIPAL_COLLECTED'), value: row.CashPrincipalCollected },
     { label: t('UI_INTEREST_COLLECTED'), value: row.CashInterestCollected },
