@@ -101,7 +101,7 @@ export default function FormDialog({ title, action, onClose, wide, lock, childre
         <>
           <p role="status" className="mt-4 text-base text-body">{state.notice}</p>
           <div className="mt-6 flex justify-end">
-            <button type="button" onClick={onClose} className={`${BUTTON} bg-accent text-white hover:bg-accent-strong`}>
+            <button type="button" onClick={onClose} className={`${BUTTON} bg-accent text-white hover:bg-accent-hover`}>
               {t('UI_CLOSE')}
             </button>
           </div>
@@ -119,7 +119,7 @@ export default function FormDialog({ title, action, onClose, wide, lock, childre
             <button
               type="submit"
               disabled={pending}
-              className={`${BUTTON} bg-accent text-white hover:bg-accent-strong disabled:opacity-60`}
+              className={`${BUTTON} bg-accent text-white hover:bg-accent-hover disabled:opacity-60`}
             >
               {pending ? t('UI_SAVING') : t('UI_SAVE')}
             </button>

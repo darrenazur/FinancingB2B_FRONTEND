@@ -91,7 +91,7 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
             {can(permissions, 'partner.add') && (
               <button
                 onClick={() => setForm('new')}
-                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover"
               >
                 {t('UI_ADD')}
               </button>

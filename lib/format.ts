@@ -38,6 +38,19 @@ export function formatMoney(value: string | bigint, currency = 'PHP'): string {
 }
 
 // The driver returns stored dates as UTC, so UTC here shows the same calendar day the DB holds.
+export const manilaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+
+// Dates are YYYY-MM-DD text, so this stays clear of the browser's time zone.
+export function addDays(date: string, days: number): string {
+  const moved = new Date(`${date}T00:00:00Z`)
+  moved.setUTCDate(moved.getUTCDate() + days)
+  return moved.toISOString().slice(0, 10)
+}
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86400000)
+}
+
 export function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('en-PH', {
     year: 'numeric',

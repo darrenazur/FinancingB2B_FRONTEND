@@ -55,6 +55,8 @@ export interface Loan extends Audit {
   tenureId: number
   settlementName: string
   settlementId: number
+  releaseDate: string
+  backdateReason: string
   maturityDate: string
   closed: boolean
   deleted: boolean
@@ -80,6 +82,7 @@ export interface Payment extends Audit {
   hasProof: boolean
   reversalOf: number | null
   reversalReason: string
+  backdateReason: string
 }
 
 export interface Penalty extends Audit {
@@ -88,6 +91,17 @@ export interface Penalty extends Audit {
   fee: string
   status: string
   waiveReason: string
+}
+
+export interface WriteOff extends Audit {
+  id: number
+  date: string
+  reason: string
+  undoneDate: string | null
+  undoReason: string
+  installments: number
+  principal: string
+  interest: string
 }
 
 export interface Option {
@@ -154,6 +168,8 @@ interface LoanRow extends AuditRow {
   TenureDurationID: number
   SettlementName: string
   SettlementStructID: number
+  ReleaseDate: string
+  BackdateReason: string | null
   MaturityDate: string
   Closed: boolean
   Deleted: boolean
@@ -179,6 +195,7 @@ interface PaymentRow extends AuditRow {
   ReferenceNo: string | null
   ReversalOfPaymentID: number | null
   ReversalReason: string | null
+  BackdateReason: string | null
 }
 
 interface PenaltyRow extends AuditRow {
@@ -188,6 +205,17 @@ interface PenaltyRow extends AuditRow {
   PenaltyStatusName: string
   WaiveReason: string | null
   Deleted: boolean
+}
+
+interface WriteOffRow extends AuditRow {
+  LoanWriteOffID: number
+  WriteOffDate: string
+  Reason: string
+  UndoneDate: string | null
+  UndoReason: string | null
+  Installments: number
+  PrincipalWrittenOff: string
+  InterestWrittenOff: string
 }
 
 type LookupRow = Record<string, string | number | boolean | null>
@@ -211,6 +239,8 @@ function toLoan(row: LoanRow): Loan {
     tenureId: row.TenureDurationID,
     settlementName: row.SettlementName,
     settlementId: row.SettlementStructID,
+    releaseDate: row.ReleaseDate,
+    backdateReason: row.BackdateReason ?? '',
     maturityDate: row.MaturityDate,
     closed: Boolean(row.Closed),
     deleted: Boolean(row.Deleted),
@@ -306,6 +336,25 @@ export async function getPayments(loanId: number): Promise<Payment[]> {
       hasProof: isFileKey(row.ProofPath),
       reversalOf: row.ReversalOfPaymentID,
       reversalReason: row.ReversalReason ?? '',
+      backdateReason: row.BackdateReason ?? '',
+      ...readAudit(row),
+    }))
+    .sort((a, b) => b.id - a.id)
+}
+
+// Newest first. Only the newest can still be in force; older ones were undone.
+export async function getWriteOffs(loanId: number): Promise<WriteOff[]> {
+  const rows = await getList<WriteOffRow>(`/loan-writeoff-view/${loanId}`)
+  return rows
+    .map(row => ({
+      id: row.LoanWriteOffID,
+      date: row.WriteOffDate,
+      reason: row.Reason,
+      undoneDate: row.UndoneDate,
+      undoReason: row.UndoReason ?? '',
+      installments: row.Installments,
+      principal: row.PrincipalWrittenOff,
+      interest: row.InterestWrittenOff,
       ...readAudit(row),
     }))
     .sort((a, b) => b.id - a.id)

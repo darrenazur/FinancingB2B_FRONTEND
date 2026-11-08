@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { saveLoan } from '../../app/loans/actions'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
+import { daysBetween, formatDate, manilaToday } from '../../lib/format'
 import { newRequestKey } from '../../lib/requestKey'
+import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
 import { t } from '../../lib/captions/t'
 
@@ -13,11 +15,16 @@ interface LoanFormProps {
   loan: Loan | null
   partners: Option[]
   lookups: LoanLookups
+  canBackdate: boolean
   onClose: () => void
 }
 
-export default function LoanForm({ loan, partners, lookups, onClose }: LoanFormProps) {
+export default function LoanForm({ loan, partners, lookups, canBackdate, onClose }: LoanFormProps) {
   const [requestKey] = useState(newRequestKey)
+  const today = manilaToday()
+  const savedDate = loan?.releaseDate.slice(0, 10) ?? today
+  const [releaseDate, setReleaseDate] = useState(savedDate)
+  const [confirmed, setConfirmed] = useState(false)
   const { field } = useFields({
     PartnerProfileID: loan ? String(loan.partnerId) : '',
     // The API stores five decimals and takes two.
@@ -27,6 +34,7 @@ export default function LoanForm({ loan, partners, lookups, onClose }: LoanFormP
     TermTypeID: loan ? String(loan.termTypeId) : '',
     TenureDurationID: loan ? String(loan.tenureId) : '',
     SettlementStructID: loan ? String(loan.settlementId) : '',
+    BackdateReason: '',
   })
 
   return (
@@ -97,7 +105,29 @@ export default function LoanForm({ loan, partners, lookups, onClose }: LoanFormP
             {lookups.settlements.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </Field>
+        {canBackdate && (
+          <Field label={t('UI_RELEASE_DATE')} hint={t('UI_RELEASE_DATE_HINT')}>
+            <DatePicker name="ReleaseDate" value={releaseDate} onChange={setReleaseDate} max={today} required />
+          </Field>
+        )}
+        {releaseDate !== savedDate && (
+          <Field label={t('UI_REASON_FOR_THE_PAST_DATE')}>
+            <input {...field('BackdateReason')} required maxLength={500} className={INPUT} />
+          </Field>
+        )}
       </div>
+      {releaseDate !== savedDate && (
+        <label className="flex items-start gap-3 text-base text-body">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={event => setConfirmed(event.target.checked)}
+            required
+            className="mt-1 h-4 w-4"
+          />
+          {t('UI_RELEASE_DATE_CONFIRM', { date: formatDate(releaseDate), days: daysBetween(releaseDate, today) })}
+        </label>
+      )}
     </FormDialog>
   )
 }

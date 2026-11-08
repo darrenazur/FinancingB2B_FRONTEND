@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { readTheme } from '../lib/theme'
 import './globals.css'
 import DashboardShell from '../components/dashboard/DashboardShell'
 import CaptionProvider from '../components/CaptionProvider'
@@ -18,12 +19,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   await loadCaptions()
   const user = await getCurrentUser()
+  const theme = await readTheme()
 
   return (
-    <html lang="en">
+    // The theme switch changes data-theme after load, and browser extensions add their own attributes here
+    <html lang="en" data-theme={theme === 'system' ? undefined : theme} suppressHydrationWarning>
       <body className={inter.className}>
         <CaptionProvider captions={allCaptions()}>
-          <DashboardShell user={user}>{children}</DashboardShell>
+          <DashboardShell user={user} theme={theme}>{children}</DashboardShell>
         </CaptionProvider>
       </body>
     </html>

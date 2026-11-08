@@ -93,7 +93,7 @@ export default function LoansTable({ loans, verifiedPartners, lookups, permissio
             {can(permissions, 'loan.add') && (
               <button
                 onClick={() => setForm('new')}
-                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover"
               >
                 {t('UI_ADD')}
               </button>
@@ -147,6 +147,7 @@ export default function LoansTable({ loans, verifiedPartners, lookups, permissio
           loan={form === 'new' ? null : form}
           partners={verifiedPartners}
           lookups={lookups}
+          canBackdate={can(permissions, 'loan.backdate')}
           onClose={() => setForm(null)}
         />
       )}

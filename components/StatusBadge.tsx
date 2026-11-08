@@ -1,7 +1,7 @@
 const TONES = {
-  good: 'bg-green-50 text-good',
+  good: 'bg-good-soft text-good',
   neutral: 'bg-elevated text-body',
-  bad: 'bg-red-50 text-bad',
+  bad: 'bg-bad-soft text-bad',
 }
 
 interface StatusBadgeProps {

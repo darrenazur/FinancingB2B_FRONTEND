@@ -111,7 +111,7 @@ function VerificationDialog({ partner, onClose }: { partner: Partner; onClose: (
             onClick={() => move(step.status)}
             className={[
               'rounded-xl px-6 py-3 text-base font-medium text-white disabled:opacity-60',
-              step.status === 'REJECTED' ? 'bg-bad hover:opacity-90' : 'bg-accent hover:bg-accent-strong',
+              step.status === 'REJECTED' ? 'bg-bad hover:opacity-90' : 'bg-accent hover:bg-accent-hover',
             ].join(' ')}
           >
             {t(step.label)}

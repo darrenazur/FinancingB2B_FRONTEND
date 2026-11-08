@@ -80,7 +80,7 @@ export default function ConfigTable({ resource, rows, options, canEdit }: Config
             {editable && (
               <button
                 onClick={() => setEditing('new')}
-                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+                className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover"
               >
                 {t('UI_ADD')}
               </button>

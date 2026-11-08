@@ -41,6 +41,8 @@ export async function saveLoan(
     TermTypeID: text(formData, 'TermTypeID'),
     TenureDurationID: text(formData, 'TenureDurationID'),
     SettlementStructID: text(formData, 'SettlementStructID'),
+    ReleaseDate: text(formData, 'ReleaseDate'),
+    BackdateReason: text(formData, 'BackdateReason'),
   }
 
   const result = id === null
@@ -86,6 +88,7 @@ export async function addPayment(
     PaymentMethodID: text(formData, 'PaymentMethodID'),
     ReferenceNo: text(formData, 'ReferenceNo'),
     ProofPath: text(formData, 'ProofPath'),
+    BackdateReason: text(formData, 'BackdateReason'),
     RequestKey: requestKey,
   })
 
@@ -106,6 +109,29 @@ export async function reversePayment(
   const result = await write('POST', '/payment-reverse', {
     PaymentTransactionID: paymentId,
     ReversalReason: text(formData, 'reason'),
+  })
+
+  if (!result.saved) return result.state
+  refresh()
+  return { ok: true, error: null }
+}
+
+export async function writeOffLoan(loanId: number, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  const result = await write('POST', '/loan-writeoff', {
+    FinancingInformationID: loanId,
+    WriteOffDate: text(formData, 'date'),
+    Reason: text(formData, 'reason'),
+  })
+
+  if (!result.saved) return result.state
+  refresh()
+  return { ok: true, error: null }
+}
+
+export async function undoWriteOff(loanId: number, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  const result = await write('POST', '/loan-writeoff-undo', {
+    FinancingInformationID: loanId,
+    Reason: text(formData, 'reason'),
   })
 
   if (!result.saved) return result.state

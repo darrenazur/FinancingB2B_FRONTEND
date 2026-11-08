@@ -57,7 +57,7 @@ export default function LoginForm({ expired }: { expired: boolean }) {
         <button
           type="submit"
           disabled={pending}
-          className="mt-2 rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong disabled:opacity-60"
+          className="mt-2 rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover disabled:opacity-60"
         >
           {pending ? t('UI_SIGNING_IN') : t('UI_SIGN_IN')}
         </button>

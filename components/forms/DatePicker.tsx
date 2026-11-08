@@ -1,6 +1,7 @@
 'use client'
 
 import { KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { manilaToday } from '../../lib/format'
 import { t } from '../../lib/captions/t'
 
 const MONTHS = ['UI_JANUARY', 'UI_FEBRUARY', 'UI_MARCH', 'UI_APRIL', 'UI_MAY', 'UI_JUNE', 'UI_JULY', 'UI_AUGUST', 'UI_SEPTEMBER', 'UI_OCTOBER', 'UI_NOVEMBER', 'UI_DECEMBER']
@@ -17,7 +18,6 @@ const pad = (value: number) => String(value).padStart(2, '0')
 const toValue = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`
 const daysIn = (year: number, month: number) => new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
 const firstWeekday = (year: number, month: number) => new Date(Date.UTC(year, month, 1)).getUTCDay()
-const manilaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
 
 function display(value: string) {
   const [year, month, day] = value.split('-').map(Number)

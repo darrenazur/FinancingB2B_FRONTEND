@@ -52,7 +52,7 @@ export default function ChangePasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="self-end rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong disabled:opacity-60"
+        className="self-end rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover disabled:opacity-60"
       >
         {pending ? t('UI_SAVING') : t('UI_SAVE')}
       </button>

@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import { addPayment } from '../../app/loans/actions'
 import type { Option } from '../../lib/api/financing'
+import { addDays, manilaToday } from '../../lib/format'
 import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
 import FileField from '../forms/FileField'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
 import { t } from '../../lib/captions/t'
 
-const manilaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+const MAX_BACK_DAYS = 7
 
 interface AddPaymentButtonProps {
   loanId: number
@@ -17,33 +18,38 @@ interface AddPaymentButtonProps {
   methods: Option[]
   due: { amount: string; label: string } | null
   loanDate: string
+  canBackdate: boolean
 }
 
-export default function AddPaymentButton({ loanId, loanNo, methods, due, loanDate }: AddPaymentButtonProps) {
+export default function AddPaymentButton(props: AddPaymentButtonProps) {
   const [open, setOpen] = useState(false)
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-strong"
+        className="rounded-xl bg-accent px-6 py-3 text-base font-medium text-white hover:bg-accent-hover"
       >
         {t('UI_ADD_PAYMENT')}
       </button>
-      {open && <PaymentForm loanId={loanId} loanNo={loanNo} methods={methods} due={due} loanDate={loanDate} onClose={() => setOpen(false)} />}
+      {open && <PaymentForm {...props} onClose={() => setOpen(false)} />}
     </>
   )
 }
 
-function PaymentForm({ loanId, loanNo, methods, due, loanDate, onClose }: AddPaymentButtonProps & { onClose: () => void }) {
+function PaymentForm({ loanId, loanNo, methods, due, loanDate, canBackdate, onClose }: AddPaymentButtonProps & { onClose: () => void }) {
   const [requestKey] = useState(newRequestKey)
+  const today = manilaToday()
+  const earliestAllowed = addDays(today, -MAX_BACK_DAYS)
+  const minDate = canBackdate || loanDate > earliestAllowed ? loanDate : earliestAllowed
   const [payDue, setPayDue] = useState(false)
   const { values, setValues, field } = useFields({
     AmountPaid: '',
-    TransactionDt: manilaToday(),
+    TransactionDt: today,
     PaymentMethodID: '',
     ReferenceNo: '',
     ProofPath: '',
+    BackdateReason: '',
   })
 
   return (
@@ -71,16 +77,21 @@ function PaymentForm({ loanId, loanNo, methods, due, loanDate, onClose }: AddPay
           className={`${INPUT} ${payDue ? 'bg-elevated text-muted' : ''}`}
         />
       </Field>
-      <Field label={t('UI_PAYMENT_DATE')}>
+      <Field label={t('UI_PAYMENT_DATE')} hint={canBackdate ? undefined : t('UI_UP_TO_7_DAYS_BACK')}>
         <DatePicker
           name="TransactionDt"
           value={values.TransactionDt}
           onChange={TransactionDt => setValues(current => ({ ...current, TransactionDt }))}
-          min={loanDate}
-          max={manilaToday()}
+          min={minDate}
+          max={today}
           required
         />
       </Field>
+      {values.TransactionDt < today && (
+        <Field label={t('UI_REASON_FOR_THE_PAST_DATE')}>
+          <input {...field('BackdateReason')} required maxLength={500} className={INPUT} />
+        </Field>
+      )}
       <Field label={t('UI_PAYMENT_METHOD')}>
         <select {...field('PaymentMethodID')} required className={INPUT}>
           <option value="">{t('UI_SELECT_METHOD')}</option>
