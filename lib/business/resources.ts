@@ -279,7 +279,7 @@ export const BIZ_RESOURCES: BizResource[] = [
     sources: ['cbf', 'cbfLoan'],
     fields: [
       { name: 'BizCbfID', label: 'UI_CBF_CONTRACT', type: 'select', source: 'cbf', required: true, fixedOnEdit: true },
-      { name: 'FinancingInformationID', label: 'UI_LOAN', type: 'select', source: 'cbfLoan', required: true, fixedOnEdit: true },
+      { name: 'FinancingInformationID', label: 'UI_LOAN_NUMBER', type: 'select', source: 'cbfLoan', required: true, fixedOnEdit: true },
       { name: 'Amount', label: 'UI_AMOUNT', type: 'money', required: true, hint: 'UI_CBF_LOAN_AMOUNT_HINT' },
       { name: 'AddedDate', label: 'UI_DATE_ADDED', type: 'date', required: true, fixedOnEdit: true },
       remarks,

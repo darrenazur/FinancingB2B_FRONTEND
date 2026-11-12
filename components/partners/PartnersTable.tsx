@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { deletePartner, loadPartner } from '../../app/partners/actions'
 import type { Option, Partner, PartnerDetails, PartnerLookups } from '../../lib/api/financing'
 import { can } from '../../lib/permissions'
@@ -10,14 +10,14 @@ import { ROW_BUTTON_NEUTRAL } from '../actions/rowButton'
 import StatusBadge from '../StatusBadge'
 import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
-import AssignAction from './AssignAction'
+import AssignPartnersDialog, { LoanStats } from './AssignPartnersDialog'
 import PartnerForm from './PartnerForm'
 import VerificationAction from './VerificationAction'
 import { t } from '../../lib/captions/t'
 
 const STATUS_TONE: Record<string, 'good' | 'neutral' | 'bad'> = { VERIFIED: 'good', REJECTED: 'bad' }
 
-const COLUMNS: Column<Partner>[] = [
+const BASE_COLUMNS: Column<Partner>[] = [
   {
     key: 'name',
     label: 'UI_NAME',
@@ -47,6 +47,8 @@ const COLUMNS: Column<Partner>[] = [
     text: partner => partner.status,
     render: partner => <StatusBadge label={partner.status} tone={STATUS_TONE[partner.status] ?? 'neutral'} />,
   },
+]
+const RECORD_COLUMNS: Column<Partner>[] = [
   {
     key: 'record',
     label: 'UI_RECORD',
@@ -61,13 +63,24 @@ interface PartnersTableProps {
   partners: Partner[]
   lookups: PartnerLookups
   users: Option[]
+  loanStats: Record<number, LoanStats>
   permissions: string[]
 }
 
-export default function PartnersTable({ partners, lookups, users, permissions }: PartnersTableProps) {
+export default function PartnersTable({ partners, lookups, users, loanStats, permissions }: PartnersTableProps) {
   const [form, setForm] = useState<PartnerDetails | 'new' | null>(null)
+  const [assigning, setAssigning] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, startLoading] = useTransition()
+
+  // Only users who can assign see who each partner is assigned to.
+  const canAssign = can(permissions, 'partner.assign')
+  const columns = useMemo<Column<Partner>[]>(() => {
+    if (!canAssign) return [...BASE_COLUMNS, ...RECORD_COLUMNS]
+    const assignedTo = (partner: Partner) =>
+      partner.assignedUserId === null ? t('UI_UNASSIGNED') : users.find(user => user.id === partner.assignedUserId)?.label ?? '—'
+    return [...BASE_COLUMNS, { key: 'assigned', label: 'UI_ASSIGNED_TO', filter: 'select', text: assignedTo }, ...RECORD_COLUMNS]
+  }, [canAssign, users])
 
   const openEdit = (id: number) => {
     setLoadError(null)
@@ -84,7 +97,7 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
 
       <DataTable
         rows={partners}
-        columns={COLUMNS}
+        columns={columns}
         rowKey={partner => partner.id}
         toolbar={
           <>
@@ -96,6 +109,14 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
                 {t('UI_ADD')}
               </button>
             )}
+            {can(permissions, 'partner.assign') && users.length > 0 && (
+              <button
+                onClick={() => setAssigning(true)}
+                className="rounded-xl border border-[var(--border)] bg-surface px-6 py-3 text-base font-medium text-ink hover:bg-elevated"
+              >
+                {t('UI_ASSIGN_2')}
+              </button>
+            )}
             <RefreshButton />
           </>
         }
@@ -105,7 +126,6 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
         defaultSort={NEWEST_FIRST}
         rowActions={partner => !partner.deleted && (
           <div className="flex justify-end gap-2.5">
-            {can(permissions, 'partner.assign') && <AssignAction partner={partner} users={users} />}
             {can(permissions, 'partner.verify') && <VerificationAction partner={partner} />}
             {can(permissions, 'partner.edit') && (
               <button
@@ -137,6 +157,10 @@ export default function PartnersTable({ partners, lookups, users, permissions }:
           lookups={lookups}
           onClose={() => setForm(null)}
         />
+      )}
+
+      {assigning && (
+        <AssignPartnersDialog partners={partners} users={users} loanStats={loanStats} onClose={() => setAssigning(false)} />
       )}
     </>
   )

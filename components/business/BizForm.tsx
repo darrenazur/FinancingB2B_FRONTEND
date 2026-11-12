@@ -71,6 +71,7 @@ export default function BizForm({ resource, row, title, options, onClose }: BizF
             onChange={date => set(field.name, date)}
             max={field.type === 'date' ? today : undefined}
             required={field.required}
+            disabled={Boolean(row && field.fixedOnEdit)}
           />
         )
       case 'month':

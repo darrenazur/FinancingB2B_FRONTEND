@@ -60,6 +60,8 @@ export interface Loan extends Audit {
   maturityDate: string
   closed: boolean
   deleted: boolean
+  // The partner's agent: loans follow the partner they belong to
+  assignedUserId: number | null
 }
 
 export interface Installment {
@@ -173,6 +175,7 @@ interface LoanRow extends AuditRow {
   MaturityDate: string
   Closed: boolean
   Deleted: boolean
+  AssignedUserID: number | null
 }
 
 interface InstallmentRow {
@@ -244,6 +247,7 @@ function toLoan(row: LoanRow): Loan {
     maturityDate: row.MaturityDate,
     closed: Boolean(row.Closed),
     deleted: Boolean(row.Deleted),
+    assignedUserId: row.AssignedUserID ?? null,
     ...readAudit(row),
   }
 }
