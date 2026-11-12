@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { closeLoan, processOverdue } from '../../app/loans/actions'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
 import { compareMoney, formatDate, formatMoney } from '../../lib/format'
@@ -18,7 +18,7 @@ import { t } from '../../lib/captions/t'
 
 const statusLabel = (loan: Loan) => (loan.deleted ? t('UI_DELETED_2') : loan.closed ? t('UI_CLOSED_2') : t('UI_OPEN'))
 
-const COLUMNS: Column<Loan>[] = [
+const BASE_COLUMNS: Column<Loan>[] = [
   {
     key: 'partner',
     label: 'UI_PARTNER',
@@ -69,24 +69,33 @@ const COLUMNS: Column<Loan>[] = [
     text: statusLabel,
     render: loan => <StatusBadge label={statusLabel(loan)} tone={loan.deleted ? 'bad' : loan.closed ? 'neutral' : 'good'} />,
   },
-  ...auditColumns<Loan>(),
 ]
 
 interface LoansTableProps {
   loans: Loan[]
   verifiedPartners: Option[]
   lookups: LoanLookups
+  users: Option[]
   permissions: string[]
 }
 
-export default function LoansTable({ loans, verifiedPartners, lookups, permissions }: LoansTableProps) {
+export default function LoansTable({ loans, verifiedPartners, lookups, users, permissions }: LoansTableProps) {
   const [form, setForm] = useState<Loan | 'new' | null>(null)
+
+  // Only users who can assign see whose care each loan is in (the partner's agent).
+  const canAssign = can(permissions, 'partner.assign')
+  const columns = useMemo<Column<Loan>[]>(() => {
+    if (!canAssign) return [...BASE_COLUMNS, ...auditColumns<Loan>()]
+    const assignedTo = (loan: Loan) =>
+      loan.assignedUserId === null ? t('UI_UNASSIGNED') : users.find(user => user.id === loan.assignedUserId)?.label ?? '—'
+    return [...BASE_COLUMNS, { key: 'assigned', label: 'UI_ASSIGNED_TO', filter: 'select', text: assignedTo }, ...auditColumns<Loan>()]
+  }, [canAssign, users])
 
   return (
     <>
       <DataTable
         rows={loans}
-        columns={COLUMNS}
+        columns={columns}
         rowKey={loan => loan.id}
         toolbar={
           <>

@@ -18,6 +18,11 @@
 //   interest (payout less the amount invested) is a cost; the amount paid back comes off cash and capital.
 // Agent pay follows each agent's rate for that month, so a raise set ahead shows from its month:
 //   agent pay = sum of fixed pay + sum of (gross x the agent's share of interest collected) x commission %
+// Quota: the gross profit at which net cash flow reaches the target (PROJ_TARGET_CASHFLOW_AMT, 0 = break-even):
+//   quota  = (owner salary + overhead + other + agent fixed pay + bank interest + investor interest
+//             + bank principal + investor principal + target) ÷ (1 − agent commission share)
+//   short  = quota − gross, never below 0; extra loans = short ÷ interest %, released the month before
+//   status = MET (nothing short), STRETCH (extra loans fit in the capital not lent out), SHORT (they don't)
 
 type Row = Record<string, string>
 
@@ -58,6 +63,10 @@ const text = (value: bigint) => {
 const pctText = (value: bigint) => `${value / PCT_SCALE}.${(value % PCT_SCALE).toString().padStart(5, '0').slice(0, 2)}`
 const max = (a: bigint, b: bigint) => (a > b ? a : b)
 const min = (a: bigint, b: bigint) => (a < b ? a : b)
+// a ÷ b rounded up (a ≥ 0, b > 0): a quota never falls a centavo short
+const ceilDiv = (a: bigint, b: bigint) => (a + b - ONE) / b
+// ₱1,000,000 in centavos: the agent commission on it gives the commission share of each peso
+const PROBE = BigInt(100000000)
 
 const monthIndex = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1
 const monthStart = (index: number) => `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}-01`
@@ -94,6 +103,7 @@ export interface Assumptions {
   emergencyMonthly: string
   openBankLoans: number
   openContracts: number
+  targetCashFlow: string
 }
 
 const HISTORY_MONTHS = 3
@@ -156,6 +166,7 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
   const ownerSalary = cents(input.settings.PROJ_OWNER_SALARY_AMT)
   const overhead = cents(input.settings.PROJ_OVERHEAD_AMT)
   const other = cents(input.settings.PROJ_OTHER_AMT)
+  const targetCash = cents(input.settings.PROJ_TARGET_CASHFLOW_AMT)
   const emergencyMonthly = cents(input.settings.EMERGENCY_MONTHLY_AMT)
   const utilizationPct = pct(input.settings.PROJ_UTILIZATION_PCT)
   const monthsAhead = Math.min(MAX_MONTHS, Math.max(1, Number(input.settings.PROJ_MONTHS) || 12))
@@ -229,6 +240,15 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
     const totalCosts = ownerSalary + overhead + other + agentSalary + bankInterest + investorInterest
     const netProfit = gross - totalCosts
     const netCash = netProfit - bankPrincipal - investorPrincipal
+    // Commission grows with gross, so the fixed outflows are divided by what each peso keeps after commission
+    const commissionOnProbe = agentPayFor(month, PROBE).commission
+    const outflows = max(ZERO, ownerSalary + overhead + other + agentPay.fixed + bankInterest + investorInterest
+      + bankPrincipal + investorPrincipal + targetCash)
+    const quota = PROBE > commissionOnProbe ? ceilDiv(outflows * PROBE, PROBE - commissionOnProbe) : ZERO
+    const short = max(ZERO, quota - gross)
+    const extraLending = interestPct > ZERO ? ceilDiv(short * HUNDRED * PCT_SCALE, interestPct) : ZERO
+    const quotaStatus = short === ZERO ? 'MET'
+      : interestPct > ZERO && extraLending <= max(ZERO, usable - portfolio) ? 'STRETCH' : 'SHORT'
 
     rows.push({
       MonthStart: monthStart(month),
@@ -249,6 +269,10 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
       BankPrincipal: text(bankPrincipal),
       InvestorPrincipal: text(investorPrincipal),
       NetCashFlow: text(netCash),
+      CashQuota: text(quota),
+      QuotaShort: text(short),
+      ExtraLending: text(extraLending),
+      QuotaStatus: quotaStatus,
       Reserves: text(reserves),
       BankDebt: text(max(ZERO, bankDebt - bankPrincipal)),
       InvestorDebt: text(max(ZERO, investorDebt)),
@@ -275,6 +299,7 @@ export function project(input: ProjectionInput): { rows: Row[]; assumptions: Ass
       emergencyMonthly: text(emergencyMonthly),
       openBankLoans: loans.length,
       openContracts: contracts.length,
+      targetCashFlow: text(targetCash),
     },
   }
 }

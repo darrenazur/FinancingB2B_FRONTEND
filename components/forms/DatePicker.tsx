@@ -31,9 +31,10 @@ interface DatePickerProps {
   min?: string
   max?: string
   required?: boolean
+  disabled?: boolean
 }
 
-export default function DatePicker({ name, value, onChange, min, max, required }: DatePickerProps) {
+export default function DatePicker({ name, value, onChange, min, max, required, disabled }: DatePickerProps) {
   const today = manilaToday()
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ top: 0, left: 0 })
@@ -125,6 +126,7 @@ export default function DatePicker({ name, value, onChange, min, max, required }
       <button
         ref={buttonRef}
         type="button"
+        disabled={disabled}
         onClick={toggle}
         aria-haspopup="dialog"
         aria-expanded={open}

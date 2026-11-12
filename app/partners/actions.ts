@@ -5,6 +5,8 @@ import { send } from '../../lib/api/client'
 import { getPartnerDetails, PartnerDetails } from '../../lib/api/financing'
 import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
+import { LockTarget } from '../../lib/lock'
+import { releaseLock, takeLock } from '../locks/actions'
 import { t } from '../../lib/captions/t'
 
 const TERMS_VERSION = '1.0'
@@ -81,6 +83,39 @@ export async function assignPartner(id: number, _previous: SaveState, formData: 
 
   refresh()
   return { ok: true, error: null }
+}
+
+// All or nothing: every partner is locked first, then one request assigns them in one transaction.
+// If any partner is busy or the save fails, nothing changes.
+export async function assignPartners(names: Record<number, string>, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  const ids = formData.getAll('PartnerID').map(Number).filter(id => id > 0)
+  const user = String(formData.get('AssignedUserID') ?? '')
+  if (ids.length === 0) return { ok: false, error: t('UI_CHECK_AT_LEAST_ONE_PARTNER') }
+
+  const taken: LockTarget[] = []
+  try {
+    const busy: string[] = []
+    for (const id of ids) {
+      const target = { type: 'PARTNER', id }
+      const lock = await takeLock(target)
+      if (lock.ok) taken.push(target)
+      else busy.push(`${names[id] ?? id} (${lock.lockedBy || lock.error})`)
+    }
+    if (busy.length > 0) return { ok: false, error: t('UI_NOTHING_ASSIGNED_BUSY', { list: busy.join(', ') }) }
+
+    const result = await send('PUT', '/partner-assign-batch', {
+      PartnerProfileIDs: ids,
+      AssignedUserID: user === '' ? null : Number(user),
+    })
+    if (!result.ok) return { ok: false, error: t('UI_NOTHING_ASSIGNED', { reason: readableError(result.message) }) }
+  } catch {
+    return notReachable()
+  } finally {
+    await Promise.all(taken.map(target => releaseLock(target)))
+  }
+
+  refresh()
+  return { ok: true, error: null, notice: t('UI_PARTNERS_ASSIGNED', { count: ids.length }) }
 }
 
 export async function updateVerification(id: number, status: string): Promise<SaveState> {

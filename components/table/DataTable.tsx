@@ -5,8 +5,16 @@ import { t } from '../../lib/captions/t'
 
 const BATCH_SIZE = 50
 const COLLATOR = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
-// Actions stay in view when a wide table scrolls sideways.
-const STICKY_ACTIONS = 'sticky right-0 bg-surface shadow-[-1px_0_0_var(--border)]'
+// The checked row's actions sit in the toolbar. Its row buttons grow to toolbar size here;
+// buttons inside their dialogs are deeper in the tree and keep their own look.
+const SELECTED_ACTIONS = [
+  'flex flex-wrap items-center gap-3',
+  '[&>div]:flex [&>div]:flex-wrap [&>div]:gap-3',
+  '[&>a]:rounded-xl [&>a]:px-6 [&>a]:py-3 [&>a]:text-base',
+  '[&>button]:rounded-xl [&>button]:px-6 [&>button]:py-3 [&>button]:text-base',
+  '[&>div>a]:rounded-xl [&>div>a]:px-6 [&>div>a]:py-3 [&>div>a]:text-base',
+  '[&>div>button]:rounded-xl [&>div>button]:px-6 [&>div>button]:py-3 [&>div>button]:text-base',
+].join(' ')
 const FILTER_INPUT = 'w-full min-w-24 rounded-lg border border-[var(--border)] bg-surface px-2.5 py-1.5 text-sm font-normal text-ink'
 
 export interface Column<Row> {
@@ -45,6 +53,8 @@ export default function DataTable<Row>({
   const [filters, setFilters] = useState<Record<string, string>>({})
   const [sort, setSort] = useState<Sort | null>(defaultSort ?? null)
   const [visible, setVisible] = useState(BATCH_SIZE)
+  // One row at a time. Only a row still shown counts, so an action never hits a row that is filtered out.
+  const [selectedKey, setSelectedKey] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLTableRowElement>(null)
 
@@ -68,6 +78,9 @@ export default function DataTable<Row>({
   }, [rows, columns, search, filters, sort])
 
   const shown = matches.slice(0, visible)
+  const selected = selectedKey === null ? null : matches.find(row => rowKey(row) === selectedKey) ?? null
+  const actions = selected && rowActions ? rowActions(selected) : null
+  const toggleRow = (key: number) => setSelectedKey(current => (current === key ? null : key))
   const hasMore = shown.length < matches.length
   const hasCriteria = search.trim() !== '' || Object.values(filters).some(value => value.trim() !== '')
 
@@ -114,6 +127,7 @@ export default function DataTable<Row>({
     <>
       <div className="mb-5 flex flex-wrap items-center gap-3">
         {toolbar}
+        {actions && <div className={SELECTED_ACTIONS}>{actions}</div>}
         <div className="flex w-full items-center gap-4 sm:ml-auto sm:w-auto">
           {hasCriteria && (
             <button onClick={clearCriteria} className="whitespace-nowrap text-base font-medium text-accent-strong hover:underline">
@@ -138,6 +152,7 @@ export default function DataTable<Row>({
         <table className="w-full text-left" style={{ minWidth }}>
           <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_var(--border)]">
             <tr className="text-sm text-muted">
+              {rowActions && <th className="w-12 px-5 pb-2 pt-4"><span className="sr-only">{t('UI_SELECT')}</span></th>}
               {columns.map(column => {
                 const sorted = sort?.key === column.key ? sort.direction : null
                 return (
@@ -155,9 +170,9 @@ export default function DataTable<Row>({
                   </th>
                 )
               })}
-              {rowActions && <th className={`${STICKY_ACTIONS} px-5 pb-2 pt-4 font-medium`}><span className="sr-only">{t('UI_ACTIONS')}</span></th>}
             </tr>
             <tr>
+              {rowActions && <th />}
               {columns.map(column => (
                 <th key={column.key} className="px-5 pb-3 font-normal">
                   {column.filter === 'select' ? (
@@ -181,12 +196,29 @@ export default function DataTable<Row>({
                   )}
                 </th>
               ))}
-              {rowActions && <th className={STICKY_ACTIONS} />}
             </tr>
           </thead>
           <tbody className="divide-y divide-line text-base">
             {shown.map(row => (
-              <tr key={rowKey(row)}>
+              <tr
+                key={rowKey(row)}
+                onClick={event => {
+                  if (!rowActions || (event.target as HTMLElement).closest('a, button, input, select, textarea')) return
+                  toggleRow(rowKey(row))
+                }}
+                className={rowActions ? `cursor-pointer ${selectedKey === rowKey(row) ? 'bg-elevated' : 'hover:bg-elevated/50'}` : ''}
+              >
+                {rowActions && (
+                  <td className="w-12 px-5 py-5">
+                    <input
+                      type="checkbox"
+                      checked={selectedKey === rowKey(row)}
+                      onChange={() => toggleRow(rowKey(row))}
+                      aria-label={t('UI_SELECT')}
+                      className="h-5 w-5 align-middle"
+                    />
+                  </td>
+                )}
                 {columns.map((column, index) => (
                   <td
                     key={column.key}
@@ -199,7 +231,6 @@ export default function DataTable<Row>({
                     {column.render ? column.render(row) : column.text(row)}
                   </td>
                 ))}
-                {rowActions && <td className={`${STICKY_ACTIONS} px-5 py-5 text-right`}>{rowActions(row)}</td>}
               </tr>
             ))}
             {matches.length === 0 && (

@@ -8,7 +8,8 @@ const TEXT_PROPS = new Set(['label', 'title', 'description', 'note', 'error', 'n
 const TEXT_ARRAYS = new Set(['PLANNED', 'GROUPS', 'MONTHS', 'WEEKDAYS'])
 const SKIP_ATTRS = new Set(['className', 'href', 'key', 'name', 'value', 'id', 'type', 'src', 'htmlFor', 'd', 'action'])
 // Text that is not a label: developer errors nobody using the site sees.
-const EXCEPTIONS = [/^API_BASE_URL and ADMIN_API_KEY/, /^Invalid money value/]
+// AZUR is the brand mark in the sidebar; a brand name is never translated or reworded.
+const EXCEPTIONS = [/^API_BASE_URL and ADMIN_API_KEY/, /^Invalid money value/, /^AZUR$/]
 
 const sentence = text => /^[A-Z←→]/.test(text) && /[a-z]/.test(text) && !/^[A-Z][a-z]+([A-Z][A-Za-z0-9]*)+$/.test(text) && !/^(ERR_|UI_)/.test(text)
 const hasWords = text => /[A-Za-z]{2}/.test(text) && !/^(ERR_|UI_|image\/)/.test(text)

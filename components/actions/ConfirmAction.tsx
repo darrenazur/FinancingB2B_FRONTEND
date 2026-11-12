@@ -31,7 +31,8 @@ interface ConfirmActionProps {
 // These actions change records, so they always ask first.
 export default function ConfirmAction({ label, title, message, action, reasonLabel, dateLabel, dateMin, dateMax, triggerClass, lock }: ConfirmActionProps) {
   const [open, setOpen] = useState(false)
-  const rowClass = label === t('UI_DELETE') ? ROW_BUTTON_DANGER : ROW_BUTTON_NEUTRAL
+  // Delete and Close can't be undone on screen, so they show in red.
+  const rowClass = label === t('UI_DELETE') || label === t('UI_CLOSE') ? ROW_BUTTON_DANGER : ROW_BUTTON_NEUTRAL
 
   return (
     <>

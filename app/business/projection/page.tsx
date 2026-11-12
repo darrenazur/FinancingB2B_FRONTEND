@@ -28,6 +28,10 @@ const COLUMNS: ReportColumn[] = [
   { name: 'BankPrincipal', label: 'UI_BANK_PRINCIPAL_PAID', kind: 'money' },
   { name: 'InvestorPrincipal', label: 'UI_INVESTOR_PRINCIPAL_REPAID', kind: 'money' },
   { name: 'NetCashFlow', label: 'UI_NET_CASH_FLOW', kind: 'money', strong: true },
+  { name: 'CashQuota', label: 'UI_PROJ_QUOTA', kind: 'money', strong: true },
+  { name: 'QuotaShort', label: 'UI_PROJ_QUOTA_SHORT', kind: 'money' },
+  { name: 'ExtraLending', label: 'UI_PROJ_EXTRA_LENDING', kind: 'money' },
+  { name: 'QuotaStatus', label: 'UI_PROJ_QUOTA_STATUS', kind: 'text' },
   { name: 'Reserves', label: 'UI_ALL_FUNDS', kind: 'money' },
   { name: 'BankDebt', label: 'UI_BANK_DEBT_LEFT', kind: 'money' },
   { name: 'InvestorDebt', label: 'UI_INVESTOR_DEBT', kind: 'money' },
@@ -50,9 +54,11 @@ export default async function ProjectionPage() {
     ['UI_OVERHEAD', formatMoney(a.overhead)],
     ['UI_OTHER_COSTS', formatMoney(a.other)],
     ['UI_PROJ_EMERGENCY', formatMoney(a.emergencyMonthly)],
+    ['UI_PROJ_TARGET_CASHFLOW', formatMoney(a.targetCashFlow)],
     ['UI_PROJ_BANK_LOANS', String(a.openBankLoans)],
     ['UI_PROJ_INVESTOR_CONTRACTS', String(a.openContracts)],
   ] : []
+  const rows = (result?.rows ?? []).map(row => ({ ...row, QuotaStatus: t(`UI_PROJ_QUOTA_IS_${row.QuotaStatus}`) }))
 
   return (
     <>
@@ -73,13 +79,14 @@ export default async function ProjectionPage() {
             ))}
           </dl>
           <p className="mt-4 text-sm text-muted">{t('UI_PROJ_NOTE_3')}</p>
+          <p className="mt-2 text-sm text-muted">{t('UI_PROJ_QUOTA_NOTE')}</p>
           <Link href="/business/setting" className="mt-3 inline-block text-base font-medium text-accent-strong hover:underline">
             {t('UI_PROJ_CHANGE_SETTINGS')}
           </Link>
         </section>
       )}
 
-      <ReportTable columns={COLUMNS} rows={result?.rows ?? []} keyOf={row => row.MonthStart ?? ''} />
+      <ReportTable columns={COLUMNS} rows={rows} keyOf={row => row.MonthStart ?? ''} />
     </>
   )
 }
