@@ -89,6 +89,7 @@ const MESSAGES: Record<string, string> = {
   ERR_PENALTY_NOT_UNPAID: 'Only an unpaid late fee can be waived.',
   ERR_PLEASE_RETRY: 'The system was busy. Please try again.',
   ERR_PROOF_REQUIRED: 'This payment method needs a proof file.',
+  ERR_REMARKS_TOO_LONG: 'Remarks can be up to 500 characters.',
   ERR_PROVINCE_COUNTRY_NOT_VALID: 'That province isn’t in the selected country.',
   ERR_PROVINCE_NOT_VALID: 'Choose a valid province.',
   ERR_SYSTEM_BUSY: 'The system is busy. Try again in a moment.',

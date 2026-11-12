@@ -1,6 +1,7 @@
 'use client'
 
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../lib/captions/t'
 
 const BATCH_SIZE = 50
@@ -16,6 +17,32 @@ const SELECTED_ACTIONS = [
   '[&>div>button]:rounded-xl [&>div>button]:px-6 [&>div>button]:py-3 [&>div>button]:text-base',
 ].join(' ')
 const FILTER_INPUT = 'w-full min-w-24 rounded-lg border border-[var(--border)] bg-surface px-2.5 py-1.5 text-sm font-normal text-ink'
+
+// Each page keeps its table's view for this browser tab, so coming back from a record lands where the person left.
+const VIEW_PREFIX = 'table-view:'
+interface SavedView {
+  search: string
+  filters: Record<string, string>
+  sort: Sort | null
+  visible: number
+  selectedKey: number | null
+  scrollTop: number
+}
+function readView(key: string): SavedView | null {
+  try {
+    const raw = sessionStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as SavedView) : null
+  } catch {
+    return null
+  }
+}
+function writeView(key: string, view: SavedView) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(view))
+  } catch {
+    // Storage blocked or full: the table simply starts fresh next time.
+  }
+}
 
 export interface Column<Row> {
   key: string
@@ -57,6 +84,39 @@ export default function DataTable<Row>({
   const [selectedKey, setSelectedKey] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLTableRowElement>(null)
+  const storageKey = VIEW_PREFIX + usePathname()
+  const [restored, setRestored] = useState(false)
+  const pendingScroll = useRef<number | null>(null)
+
+  // Restored after hydration so the server HTML still matches; layout effect so the top never flashes.
+  /* eslint-disable react-hooks/set-state-in-effect -- browser storage can't be read during the server render */
+  useLayoutEffect(() => {
+    const saved = readView(storageKey)
+    if (saved) {
+      setSearch(saved.search)
+      setFilters(saved.filters)
+      setSort(saved.sort)
+      setVisible(Math.max(BATCH_SIZE, saved.visible))
+      setSelectedKey(saved.selectedKey)
+      pendingScroll.current = saved.scrollTop
+    }
+    setRestored(true)
+  }, [storageKey])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Scroll only once the restored rows are drawn, or the position would be cut short.
+  useLayoutEffect(() => {
+    if (!restored || pendingScroll.current === null || !scrollRef.current) return
+    scrollRef.current.scrollTop = pendingScroll.current
+    pendingScroll.current = null
+  })
+
+  const saveView = (scrollTop: number) => {
+    if (restored) writeView(storageKey, { search, filters, sort, visible, selectedKey, scrollTop })
+  }
+  useEffect(() => {
+    saveView(scrollRef.current?.scrollTop ?? 0)
+  }, [restored, storageKey, search, filters, sort, visible, selectedKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const matches = useMemo(() => {
     const needle = search.trim().toLowerCase()
@@ -148,7 +208,7 @@ export default function DataTable<Row>({
         </div>
       </div>
 
-      <div ref={scrollRef} className="max-h-[calc(100vh-20rem)] min-h-80 overflow-auto rounded-2xl border border-line bg-surface">
+      <div ref={scrollRef} onScroll={event => saveView(event.currentTarget.scrollTop)} className="max-h-[calc(100vh-20rem)] min-h-80 overflow-auto rounded-2xl border border-line bg-surface">
         <table className="w-full text-left" style={{ minWidth }}>
           <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_var(--border)]">
             <tr className="text-sm text-muted">

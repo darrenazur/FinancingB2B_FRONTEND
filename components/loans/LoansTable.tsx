@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { closeLoan, processOverdue } from '../../app/loans/actions'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
-import { compareMoney, formatDate, formatMoney } from '../../lib/format'
+import { compareMoney, formatDate, formatMoney, sumMoney } from '../../lib/format'
 import { can } from '../../lib/permissions'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
@@ -13,10 +13,14 @@ import StatusBadge from '../StatusBadge'
 import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
 import LoanForm from './LoanForm'
+import { daysLate, isOverdue, loanStatusLabel, loanStatusTone } from './loanStatus'
 import { CLOSE_LOAN_MESSAGE } from './messages'
 import { t } from '../../lib/captions/t'
 
-const statusLabel = (loan: Loan) => (loan.deleted ? t('UI_DELETED_2') : loan.closed ? t('UI_CLOSED_2') : t('UI_OPEN'))
+const totalPayment = (loan: Loan) => sumMoney([loan.principal, loan.interest])
+const balance = (loan: Loan) => totalPayment(loan) - sumMoney([loan.paid])
+// Once a payment is in, the terms can't change; remarks and the note change on the loan page.
+const hasPayments = (loan: Loan) => sumMoney([loan.paid]) > BigInt(0)
 
 const BASE_COLUMNS: Column<Loan>[] = [
   {
@@ -45,6 +49,27 @@ const BASE_COLUMNS: Column<Loan>[] = [
     compare: (a, b) => compareMoney(a.interest, b.interest),
   },
   {
+    key: 'totalPayment',
+    label: 'UI_TOTAL_PAYMENT',
+    align: 'right',
+    text: loan => formatMoney(totalPayment(loan), loan.currency),
+    compare: (a, b) => Number(totalPayment(a) > totalPayment(b)) - Number(totalPayment(a) < totalPayment(b)),
+  },
+  {
+    key: 'paid',
+    label: 'UI_TOTAL_AMOUNT_PAID',
+    align: 'right',
+    text: loan => formatMoney(loan.paid, loan.currency),
+    compare: (a, b) => compareMoney(a.paid, b.paid),
+  },
+  {
+    key: 'balance',
+    label: 'UI_BALANCE',
+    align: 'right',
+    text: loan => formatMoney(balance(loan), loan.currency),
+    compare: (a, b) => Number(balance(a) > balance(b)) - Number(balance(a) < balance(b)),
+  },
+  {
     key: 'terms',
     label: 'UI_TERMS',
     text: loan => t('UI_A_MONTH_MONTHS', { term: loan.term, monthlyRate: loan.monthlyRate, durationMonths: loan.durationMonths }),
@@ -66,8 +91,21 @@ const BASE_COLUMNS: Column<Loan>[] = [
     key: 'status',
     label: 'UI_STATUS',
     filter: 'select',
-    text: statusLabel,
-    render: loan => <StatusBadge label={statusLabel(loan)} tone={loan.deleted ? 'bad' : loan.closed ? 'neutral' : 'good'} />,
+    text: loanStatusLabel,
+    render: loan => (
+      <>
+        <StatusBadge label={loanStatusLabel(loan)} tone={loanStatusTone(loan)} />
+        {isOverdue(loan) && (
+          <p className="mt-1 whitespace-nowrap text-sm text-muted">{t('UI_DAYS_LATE', { days: daysLate(loan) })}</p>
+        )}
+      </>
+    ),
+  },
+  {
+    key: 'note',
+    label: 'UI_PROMISSORY_NOTE',
+    filter: 'select',
+    text: loan => (loan.hasPromissoryNote ? t('UI_YES') : t('UI_NONE_ON_FILE')),
   },
 ]
 
@@ -130,7 +168,7 @@ export default function LoansTable({ loans, verifiedPartners, lookups, users, pe
             </Link>
             {!loan.closed && !loan.deleted && (
               <>
-                {can(permissions, 'loan.edit') && (
+                {can(permissions, 'loan.edit') && !hasPayments(loan) && (
                   <button onClick={() => setForm(loan)} className={ROW_BUTTON_NEUTRAL} aria-label={t('UI_EDIT_LOAN', { loanNo: loan.loanNo })}>
                     {t('UI_EDIT')}
                   </button>

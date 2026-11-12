@@ -10,6 +10,16 @@ type Method = Parameters<typeof send>[0]
 
 const text = (formData: FormData, name: string) => String(formData.get(name) ?? '').trim()
 
+// An unchecked box sends nothing, so it reads as no note; the picture goes only with the box checked.
+function noteFields(formData: FormData) {
+  const hasNote = formData.get('HasPromissoryNote') === '1'
+  return {
+    Remarks: text(formData, 'Remarks'),
+    HasPromissoryNote: hasNote ? 1 : 0,
+    PromissoryNotePath: hasNote ? text(formData, 'PromissoryNotePath') : '',
+  }
+}
+
 function refresh() {
   revalidatePath('/loans')
   revalidatePath('/loans/[id]', 'page')
@@ -43,11 +53,21 @@ export async function saveLoan(
     SettlementStructID: text(formData, 'SettlementStructID'),
     ReleaseDate: text(formData, 'ReleaseDate'),
     BackdateReason: text(formData, 'BackdateReason'),
+    ...noteFields(formData),
   }
 
   const result = id === null
     ? await write('POST', '/financing-information-add', { ...payload, RequestKey: requestKey })
     : await write('PUT', '/financing-information-update', { ...payload, FinancingInformationID: id })
+
+  if (!result.saved) return result.state
+  refresh()
+  return { ok: true, error: null }
+}
+
+// Remarks and the promissory note only (loan.note), allowed after payments.
+export async function saveLoanNote(id: number, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  const result = await write('PUT', '/loan-note-update', { FinancingInformationID: id, ...noteFields(formData) })
 
   if (!result.saved) return result.state
   refresh()
