@@ -4,6 +4,8 @@ import { ReactNode } from 'react'
 import ConfirmAction from '../../../components/actions/ConfirmAction'
 import RefreshButton from '../../../components/actions/RefreshButton'
 import AddPaymentButton from '../../../components/loans/AddPaymentButton'
+import LoanNoteButton from '../../../components/loans/LoanNoteButton'
+import { daysLate, isOverdue, loanStatusLabel, loanStatusTone } from '../../../components/loans/loanStatus'
 import { CLOSE_LOAN_MESSAGE } from '../../../components/loans/messages'
 import PageHeader from '../../../components/PageHeader'
 import StatCard from '../../../components/StatCard'
@@ -75,9 +77,11 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
     item.interest,
     ...unpaidFees.filter(fee => fee.installmentNo === item.number).map(fee => fee.fee),
   ])
+  // What is still owed on one installment: its total due less what was paid on it.
+  const remainingDue = (item: Installment) => totalDue(item) - sumMoney([item.paid])
   // What the form fills in when "Pay total due" is checked: what is left on the oldest open installment.
   const nextDue = installments.find(item => !CLOSED_INSTALLMENTS.includes(item.status))
-  const dueLeft = nextDue ? totalDue(nextDue) - sumMoney([nextDue.paid]) : BigInt(0)
+  const dueLeft = nextDue ? remainingDue(nextDue) : BigInt(0)
   const due = nextDue && dueLeft > BigInt(0)
     ? { amount: toAmount(dueLeft), label: t('UI_INSTALLMENT', { dueLeft: money(dueLeft), number: nextDue.number }) }
     : null
@@ -98,14 +102,28 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
         title={t('UI_LOAN', { loanNo: loan.loanNo })}
         description={t('UI_MONTHS_AT_A_MONTH_MATURES', { partnerName: loan.partnerName, term: loan.term, durationMonths: loan.durationMonths, monthlyRate: loan.monthlyRate, settlementName: loan.settlementName, maturityDate: formatDate(loan.maturityDate) })}
       />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <StatusBadge label={loanStatusLabel(loan)} tone={loanStatusTone(loan)} />
+        {isOverdue(loan) && <span className="text-base text-muted">{t('UI_DAYS_LATE', { days: daysLate(loan) })}</span>}
+      </div>
       <p className="mb-6 text-base text-body">
         {t('UI_RELEASED_ON', { date: formatDate(loan.releaseDate) })}
         {loan.backdateReason && <span className="ml-2 text-muted">{t('UI_BACKDATED_REASON', { reason: loan.backdateReason })}</span>}
       </p>
+      <p className="mb-2 text-base text-body">
+        {t('UI_PROMISSORY_NOTE')}{': '}{loan.hasPromissoryNote ? t('UI_YES') : t('UI_NONE_ON_FILE')}
+        {loan.promissoryNoteFile && (
+          <a href={`/files/loan-note/${loan.id}`} target="_blank" rel="noreferrer" className="ml-3 font-medium text-accent-strong hover:underline">
+            {t('UI_VIEW')}
+          </a>
+        )}
+      </p>
+      {loan.remarks && <p className="mb-6 whitespace-pre-line text-base text-muted">{loan.remarks}</p>}
 
       <div className="mb-8 flex flex-wrap gap-3">
         {isOpen && can(permissions, 'payment.add') && <AddPaymentButton loanId={loan.id} loanNo={loan.loanNo} methods={methods} due={due} loanDate={loan.releaseDate.slice(0, 10)} canBackdate={can(permissions, 'payment.backdate')} />}
         <RefreshButton />
+        {!loan.deleted && can(permissions, 'loan.note') && <LoanNoteButton loan={loan} className={SECONDARY_BUTTON} />}
         {isOpen && can(permissions, 'loan.close') && (
           <ConfirmAction
             label={t('UI_CLOSE')}
@@ -171,6 +189,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
                 <th className={`${HEADER_CELL} text-right`}>{t('UI_INTEREST')}</th>
                 <th className={`${HEADER_CELL} text-right`}>{t('UI_TOTAL_DUE')}</th>
                 <th className={`${HEADER_CELL} text-right`}>{t('UI_PAID')}</th>
+                <th className={`${HEADER_CELL} text-right`}>{t('UI_REMAINING_DUE')}</th>
                 <th className={HEADER_CELL}>{t('UI_STATUS')}</th>
               </tr>
             </thead>
@@ -183,6 +202,9 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
                   <td className={MONEY_CELL}>{money(item.interest)}</td>
                   <td className={`${MONEY_CELL} font-medium text-ink`}>{money(totalDue(item))}</td>
                   <td className={MONEY_CELL}>{money(item.paid)}</td>
+                  <td className={`${MONEY_CELL} font-medium text-ink`}>
+                    {item.status === 'CANCELLED' || item.status === 'WRITTEN OFF' ? '—' : money(remainingDue(item))}
+                  </td>
                   <td className={CELL}><StatusBadge label={item.status} tone={TONE[item.status] ?? 'neutral'} /></td>
                 </tr>
               ))}

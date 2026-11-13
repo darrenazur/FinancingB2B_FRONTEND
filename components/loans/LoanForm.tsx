@@ -7,6 +7,7 @@ import { daysBetween, formatDate, manilaToday } from '../../lib/format'
 import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
+import PromissoryNoteFields from './PromissoryNoteFields'
 import { t } from '../../lib/captions/t'
 
 const SECTION_GRID = 'grid gap-5 md:grid-cols-2'
@@ -128,6 +129,7 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
           {t('UI_RELEASE_DATE_CONFIRM', { date: formatDate(releaseDate), days: daysBetween(releaseDate, today) })}
         </label>
       )}
+      <PromissoryNoteFields loan={loan} />
     </FormDialog>
   )
 }

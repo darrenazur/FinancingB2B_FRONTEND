@@ -138,6 +138,16 @@ export async function getDashboard(): Promise<ReportRow | null> {
   return (await report('dashboard'))[0] ?? null
 }
 
+// One row as of today: what borrowers still owe and what came in.
+export async function getOverview(): Promise<ReportRow | null> {
+  return (await report('overview'))[0] ?? null
+}
+
+// Each loan with an installment past due, most days late first.
+export async function getOverdueLoans(): Promise<ReportRow[]> {
+  return (await report('overdue-loan')).sort((a, b) => Number(b.DaysLate) - Number(a.DaysLate))
+}
+
 export async function getFunds(): Promise<BizFund[]> {
   return (await view('fund')).filter(row => !row.Deleted)
     .map(row => ({ id: Number(row.BizFundID), name: cell(row.Name), balance: cell(row.Balance) || '0' }))

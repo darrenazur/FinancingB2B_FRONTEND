@@ -3,7 +3,7 @@ import { Audit, AuditRow, readAudit } from '../audit'
 import { getAllPages, getList, getRecord } from './client'
 import { t } from '../captions/t'
 
-const isFileKey = (path: string | null | undefined) => /^(partners|payments)\/[0-9a-f-]{36}$/.test(path ?? '')
+const isFileKey = (path: string | null | undefined) => /^(partners|payments|loans)\/[0-9a-f-]{36}$/.test(path ?? '')
 
 // id is the database key for API calls and stays off the screen. People see the number from NORANGE.
 export interface Partner extends Audit {
@@ -62,6 +62,14 @@ export interface Loan extends Audit {
   deleted: boolean
   // The partner's agent: loans follow the partner they belong to
   assignedUserId: number | null
+  remarks: string
+  hasPromissoryNote: boolean
+  // The stored file's key, so the form can keep it; the file itself is only served through its loan
+  promissoryNoteFile: string
+  // Paid on principal and interest, net of reversals (the loan page's "Paid")
+  paid: string
+  // Oldest installment past due and still open; null = not overdue
+  overdueSince: string | null
 }
 
 export interface Installment {
@@ -176,6 +184,11 @@ interface LoanRow extends AuditRow {
   Closed: boolean
   Deleted: boolean
   AssignedUserID: number | null
+  Remarks: string | null
+  HasPromissoryNote: boolean | null
+  PromissoryNotePath: string | null
+  TotalPaidAmt: string | null
+  OverdueSince: string | null
 }
 
 interface InstallmentRow {
@@ -248,6 +261,11 @@ function toLoan(row: LoanRow): Loan {
     closed: Boolean(row.Closed),
     deleted: Boolean(row.Deleted),
     assignedUserId: row.AssignedUserID ?? null,
+    remarks: row.Remarks ?? '',
+    hasPromissoryNote: Boolean(row.HasPromissoryNote),
+    promissoryNoteFile: isFileKey(row.PromissoryNotePath) ? row.PromissoryNotePath ?? '' : '',
+    paid: row.TotalPaidAmt ?? '0',
+    overdueSince: row.OverdueSince ? row.OverdueSince.slice(0, 10) : null,
     ...readAudit(row),
   }
 }

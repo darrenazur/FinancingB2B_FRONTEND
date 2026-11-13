@@ -5,8 +5,8 @@ import { Field, INPUT } from './FormDialog'
 import { t } from '../../lib/captions/t'
 
 const MAX_BYTES = 5 * 1024 * 1024
-const ACCEPT = { id: 'image/jpeg,image/png', selfie: 'image/jpeg,image/png', proof: 'image/jpeg,image/png,application/pdf' }
-const HINT = { id: 'UI_JPG_OR_PNG_UP_TO_5MB', selfie: 'UI_JPG_OR_PNG_UP_TO_5MB', proof: 'UI_JPG_PNG_OR_PDF_UP_TO_5MB' }
+const ACCEPT = { id: 'image/jpeg,image/png', selfie: 'image/jpeg,image/png', proof: 'image/jpeg,image/png,application/pdf', note: 'image/jpeg,image/png,application/pdf' }
+const HINT = { id: 'UI_JPG_OR_PNG_UP_TO_5MB', selfie: 'UI_JPG_OR_PNG_UP_TO_5MB', proof: 'UI_JPG_PNG_OR_PDF_UP_TO_5MB', note: 'UI_JPG_PNG_OR_PDF_UP_TO_5MB' }
 
 interface FileFieldProps {
   label: string

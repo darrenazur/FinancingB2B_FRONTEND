@@ -1,6 +1,7 @@
 'use client'
 
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../lib/captions/t'
 
 const BATCH_SIZE = 50
@@ -10,12 +11,69 @@ const COLLATOR = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
 const SELECTED_ACTIONS = [
   'flex flex-wrap items-center gap-3',
   '[&>div]:flex [&>div]:flex-wrap [&>div]:gap-3',
-  '[&>a]:rounded-xl [&>a]:px-6 [&>a]:py-3 [&>a]:text-base',
-  '[&>button]:rounded-xl [&>button]:px-6 [&>button]:py-3 [&>button]:text-base',
-  '[&>div>a]:rounded-xl [&>div>a]:px-6 [&>div>a]:py-3 [&>div>a]:text-base',
-  '[&>div>button]:rounded-xl [&>div>button]:px-6 [&>div>button]:py-3 [&>div>button]:text-base',
+  '[&>a]:rounded-xl [&>a]:px-4 [&>a]:py-2 [&>a]:text-sm',
+  '[&>button]:rounded-xl [&>button]:px-4 [&>button]:py-2 [&>button]:text-sm',
+  '[&>div>a]:rounded-xl [&>div>a]:px-4 [&>div>a]:py-2 [&>div>a]:text-sm',
+  '[&>div>button]:rounded-xl [&>div>button]:px-4 [&>div>button]:py-2 [&>div>button]:text-sm',
 ].join(' ')
+// Page toolbar buttons (Add, Refresh, Process overdue…) shrink to the same compact size.
+const TOOLBAR = '[&>button]:px-4 [&>button]:py-2 [&>button]:text-sm [&>button>svg]:h-4 [&>button>svg]:w-4'
 const FILTER_INPUT = 'w-full min-w-24 rounded-lg border border-[var(--border)] bg-surface px-2.5 py-1.5 text-sm font-normal text-ink'
+
+// Each page keeps its table's view for this browser tab, so coming back from a record lands where the person left.
+const VIEW_PREFIX = 'table-view:'
+// Column order is kept per page in this browser, even after it closes. Only keys, never row data.
+const ORDER_PREFIX = 'table-columns:'
+function readOrder(key: string): string[] | null {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as string[]) : null
+  } catch {
+    return null
+  }
+}
+function writeOrder(key: string, order: string[] | null) {
+  try {
+    if (order) localStorage.setItem(key, JSON.stringify(order))
+    else localStorage.removeItem(key)
+  } catch {
+    // Storage blocked: the default order shows next time.
+  }
+}
+// Saved keys first; a column the save doesn't know (new, or shown by a permission) goes after its default neighbour.
+function applyOrder<Row>(columns: Column<Row>[], order: string[] | null): Column<Row>[] {
+  if (!order) return columns
+  const byKey = new Map(columns.map(column => [column.key, column]))
+  const result = order.flatMap(key => byKey.get(key) ?? [])
+  columns.forEach((column, index) => {
+    if (result.includes(column)) return
+    result.splice(index === 0 ? 0 : result.indexOf(columns[index - 1]) + 1, 0, column)
+  })
+  return result
+}
+interface SavedView {
+  search: string
+  filters: Record<string, string>
+  sort: Sort | null
+  visible: number
+  selectedKey: number | null
+  scrollTop: number
+}
+function readView(key: string): SavedView | null {
+  try {
+    const raw = sessionStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as SavedView) : null
+  } catch {
+    return null
+  }
+}
+function writeView(key: string, view: SavedView) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(view))
+  } catch {
+    // Storage blocked or full: the table simply starts fresh next time.
+  }
+}
 
 export interface Column<Row> {
   key: string
@@ -47,7 +105,7 @@ export interface Sort {
 
 // All rows are already in the browser, so search, filters and sort cover every row. Scrolling only adds more to the page.
 export default function DataTable<Row>({
-  rows, columns, rowKey, rowActions, toolbar, searchLabel, emptyText, minWidth, defaultSort,
+  rows, columns: defaultColumns, rowKey, rowActions, toolbar, searchLabel, emptyText, minWidth, defaultSort,
 }: DataTableProps<Row>) {
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
@@ -57,6 +115,46 @@ export default function DataTable<Row>({
   const [selectedKey, setSelectedKey] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLTableRowElement>(null)
+  const pathname = usePathname()
+  const storageKey = VIEW_PREFIX + pathname
+  const [restored, setRestored] = useState(false)
+  const pendingScroll = useRef<number | null>(null)
+  const orderKey = ORDER_PREFIX + pathname
+  const [order, setOrder] = useState<string[] | null>(null)
+  const [dragKey, setDragKey] = useState<string | null>(null)
+  const [overKey, setOverKey] = useState<string | null>(null)
+  const columns = useMemo(() => applyOrder(defaultColumns, order), [defaultColumns, order])
+
+  // Restored after hydration so the server HTML still matches; layout effect so the top never flashes.
+  /* eslint-disable react-hooks/set-state-in-effect -- browser storage can't be read during the server render */
+  useLayoutEffect(() => {
+    const saved = readView(storageKey)
+    if (saved) {
+      setSearch(saved.search)
+      setFilters(saved.filters)
+      setSort(saved.sort)
+      setVisible(Math.max(BATCH_SIZE, saved.visible))
+      setSelectedKey(saved.selectedKey)
+      pendingScroll.current = saved.scrollTop
+    }
+    setOrder(readOrder(orderKey))
+    setRestored(true)
+  }, [storageKey, orderKey])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Scroll only once the restored rows are drawn, or the position would be cut short.
+  useLayoutEffect(() => {
+    if (!restored || pendingScroll.current === null || !scrollRef.current) return
+    scrollRef.current.scrollTop = pendingScroll.current
+    pendingScroll.current = null
+  })
+
+  const saveView = (scrollTop: number) => {
+    if (restored) writeView(storageKey, { search, filters, sort, visible, selectedKey, scrollTop })
+  }
+  useEffect(() => {
+    saveView(scrollRef.current?.scrollTop ?? 0)
+  }, [restored, storageKey, search, filters, sort, visible, selectedKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const matches = useMemo(() => {
     const needle = search.trim().toLowerCase()
@@ -120,17 +218,35 @@ export default function DataTable<Row>({
     backToTop()
   }
 
+  const moveColumn = (from: string, to: string) => {
+    if (from === to) return
+    const keys = columns.map(column => column.key)
+    keys.splice(keys.indexOf(to), 0, ...keys.splice(keys.indexOf(from), 1))
+    setOrder(keys)
+    writeOrder(orderKey, keys)
+  }
+
+  const resetColumns = () => {
+    setOrder(null)
+    writeOrder(orderKey, null)
+  }
+
   const selectOptions = (column: Column<Row>) => [...new Set(rows.map(column.text))].sort(COLLATOR.compare)
   const columnCount = columns.length + (rowActions ? 1 : 0)
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center gap-3">
+      <div className={`mb-5 flex flex-wrap items-center gap-3 ${TOOLBAR}`}>
         {toolbar}
         {actions && <div className={SELECTED_ACTIONS}>{actions}</div>}
         <div className="flex w-full items-center gap-4 sm:ml-auto sm:w-auto">
+          {order && (
+            <button onClick={resetColumns} className="whitespace-nowrap text-sm font-medium text-accent-strong hover:underline">
+              {t('UI_RESET_COLUMNS')}
+            </button>
+          )}
           {hasCriteria && (
-            <button onClick={clearCriteria} className="whitespace-nowrap text-base font-medium text-accent-strong hover:underline">
+            <button onClick={clearCriteria} className="whitespace-nowrap text-sm font-medium text-accent-strong hover:underline">
               {t('UI_CLEAR_FILTERS')}
             </button>
           )}
@@ -143,12 +259,12 @@ export default function DataTable<Row>({
             }}
             placeholder={searchLabel}
             aria-label={searchLabel}
-            className="w-full rounded-xl border border-[var(--border)] bg-surface px-4 py-3 text-base text-ink sm:w-80"
+            className="w-full rounded-xl border border-[var(--border)] bg-surface px-3.5 py-2 text-sm text-ink sm:w-72"
           />
         </div>
       </div>
 
-      <div ref={scrollRef} className="max-h-[calc(100vh-20rem)] min-h-80 overflow-auto rounded-2xl border border-line bg-surface">
+      <div ref={scrollRef} onScroll={event => saveView(event.currentTarget.scrollTop)} className="max-h-[calc(100vh-20rem)] min-h-80 overflow-auto rounded-2xl border border-line bg-surface">
         <table className="w-full text-left" style={{ minWidth }}>
           <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_var(--border)]">
             <tr className="text-sm text-muted">
@@ -158,8 +274,32 @@ export default function DataTable<Row>({
                 return (
                   <th
                     key={column.key}
+                    draggable
+                    title={t('UI_DRAG_TO_MOVE')}
+                    onDragStart={event => {
+                      setDragKey(column.key)
+                      event.dataTransfer.effectAllowed = 'move'
+                    }}
+                    onDragOver={event => {
+                      if (!dragKey) return
+                      event.preventDefault()
+                      setOverKey(column.key)
+                    }}
+                    onDrop={event => {
+                      event.preventDefault()
+                      if (dragKey) moveColumn(dragKey, column.key)
+                    }}
+                    onDragEnd={() => {
+                      setDragKey(null)
+                      setOverKey(null)
+                    }}
                     aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'}
-                    className={`px-5 pb-2 pt-4 font-medium ${column.align === 'right' ? 'text-right' : ''}`}
+                    className={[
+                      'cursor-grab px-5 pb-2 pt-4 font-medium',
+                      column.align === 'right' ? 'text-right' : '',
+                      dragKey === column.key ? 'opacity-40' : '',
+                      overKey === column.key && dragKey !== column.key ? 'shadow-[inset_3px_0_0_var(--color-accent)]' : '',
+                    ].join(' ')}
                   >
                     <button onClick={() => toggleSort(column.key)} className="inline-flex items-center gap-1.5 hover:text-ink">
                       {t(column.label)}
