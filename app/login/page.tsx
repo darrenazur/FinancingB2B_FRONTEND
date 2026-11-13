@@ -1,9 +1,13 @@
+import { redirect } from 'next/navigation'
 import LoginForm from '../../components/LoginForm'
 import ThemeSwitch from '../../components/ThemeSwitch'
+import { getCurrentUser } from '../../lib/api/session'
 import { readTheme } from '../../lib/theme'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ expired?: string }> }) {
   const { expired } = await searchParams
+  // Already signed in (the API confirms the session): skip the form.
+  if (await getCurrentUser()) redirect('/dashboard')
   const theme = await readTheme()
 
   return (
