@@ -68,6 +68,12 @@ export async function savePartner(id: number | null, _previous: SaveState, formD
           ...payload,
           PartnerProfileID: id,
           UpdateSensitiveData: sensitive,
+          // The form always sends what these fields hold, so a blank one was cleared on purpose.
+          ClearBlanks: true,
+          // Removing an ID works without unlocking the identity fields, and never changes the status.
+          RemoveID1: formData.get('RemoveID1') === 'on',
+          RemoveID2: formData.get('RemoveID2') === 'on',
+          CBRemoveID: hasCoBorrower && formData.get('CBRemoveID') === 'on',
         })
 
     if (!result.ok) return { ok: false, error: readableError(result.message) }
