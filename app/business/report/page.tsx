@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import RefreshButton from '../../../components/actions/RefreshButton'
 import ReportTable, { ReportColumn } from '../../../components/business/ReportTable'
 import PageHeader from '../../../components/PageHeader'
-import { getAgentMonthly, getMonthlyReport, getStatements } from '../../../lib/api/business'
+import { getAgentMonthly, getConcentration, getMonthlyReport, getStatements } from '../../../lib/api/business'
 import { getCurrentUser } from '../../../lib/api/session'
 import { can } from '../../../lib/permissions'
 import { t } from '../../../lib/captions/t'
@@ -50,11 +50,40 @@ const AGENTS: ReportColumn[] = [
   { name: 'PaidAmt', label: 'UI_PAY_RECORDED', kind: 'money' },
 ]
 
+const BY_PURPOSE: ReportColumn[] = [
+  { name: 'GroupName', label: 'UI_PURPOSE_OF_LOAN', kind: 'text' },
+  { name: 'ActiveLoans', label: 'UI_ACTIVE_LOANS_COUNT', kind: 'text' },
+  { name: 'OutstandingPrincipal', label: 'UI_OUTSTANDING_PRINCIPAL', kind: 'money', strong: true },
+  { name: 'SharePct', label: 'UI_SHARE', kind: 'percent' },
+]
+
+const BY_INCOME: ReportColumn[] = [
+  { name: 'GroupName', label: 'UI_SOURCE_OF_INCOME', kind: 'text' },
+  { name: 'ItemName', label: 'UI_INCOME_TYPE', kind: 'text' },
+  { name: 'ActiveLoans', label: 'UI_ACTIVE_LOANS_COUNT', kind: 'text' },
+  { name: 'OutstandingPrincipal', label: 'UI_OUTSTANDING_PRINCIPAL', kind: 'money', strong: true },
+  { name: 'SharePct', label: 'UI_SHARE', kind: 'percent' },
+]
+
+// Each group's part of all outstanding principal, biggest first. A blank group is a loan or partner not filled in yet.
+function concentration(rows: Awaited<ReturnType<typeof getConcentration>>, dimension: string) {
+  const part = rows.filter(row => row.Dimension === dimension)
+  const total = part.reduce((sum, row) => sum + Number(row.OutstandingPrincipal || 0), 0)
+  return part
+    .sort((a, b) => Number(b.OutstandingPrincipal || 0) - Number(a.OutstandingPrincipal || 0))
+    .map(row => ({
+      ...row,
+      GroupName: row.GroupName || t('UI_NOT_SET'),
+      ItemName: row.GroupName ? row.ItemName ?? '' : '',
+      SharePct: total > 0 ? (Number(row.OutstandingPrincipal || 0) * 100 / total).toFixed(2) : '0',
+    }))
+}
+
 export default async function BusinessReportPage() {
   const permissions = (await getCurrentUser())?.permissions ?? []
   if (!can(permissions, 'business.view')) redirect('/dashboard')
 
-  const [cashMonths, agents, statements] = await Promise.all([getMonthlyReport(), getAgentMonthly(), getStatements()])
+  const [cashMonths, agents, statements, spread] = await Promise.all([getMonthlyReport(), getAgentMonthly(), getStatements(), getConcentration()])
   // Interest earned (accrual) beside interest collected, from the statements
   const earned = new Map(statements.map(row => [row.MonthStart, row]))
   const months = cashMonths.map(row => ({
@@ -78,6 +107,15 @@ export default async function BusinessReportPage() {
         <h2 className="mb-2 text-xl font-semibold tracking-tight text-ink">{t('UI_AGENT_PAY_BY_MONTH')}</h2>
         <p className="mb-4 text-base text-body">{t('UI_AGENT_PAY_BY_MONTH_NOTE_2')}</p>
         <ReportTable columns={AGENTS} rows={agents} keyOf={row => `${row.MonthStart}-${row.AdminUserID}`} />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-2 text-xl font-semibold tracking-tight text-ink">{t('UI_CONCENTRATION')}</h2>
+        <p className="mb-4 text-base text-body">{t('UI_CONCENTRATION_DESCRIPTION')}</p>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <ReportTable columns={BY_PURPOSE} rows={concentration(spread, 'PURPOSE')} keyOf={row => row.GroupName ?? ''} />
+          <ReportTable columns={BY_INCOME} rows={concentration(spread, 'INCOME')} keyOf={row => `${row.GroupName}-${row.ItemName}`} />
+        </div>
       </section>
     </>
   )

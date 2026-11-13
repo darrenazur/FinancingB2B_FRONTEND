@@ -67,7 +67,11 @@ export default async function ConfigPage() {
         <section className="mb-10">
           <h2 className="mb-4 text-xl font-semibold tracking-tight text-ink">{t('UI_CONFIGURATION_TABLES')}</h2>
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            {CONFIG_TABLES.map(item => (
+            {[
+              ...CONFIG_TABLES,
+              ...CONFIG_RESOURCES.filter(resource => resource.group === 'UI_CONFIGURATION_TABLES')
+                .map(resource => ({ href: `/config/${resource.key}`, label: resource.label, description: resource.description })),
+            ].map(item => (
               <Link
                 key={item.href}
                 href={item.href}

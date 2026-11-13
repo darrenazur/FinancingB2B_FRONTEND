@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { saveLoanNote } from '../../app/loans/actions'
-import type { Loan } from '../../lib/api/financing'
+import type { ListOption, Loan } from '../../lib/api/financing'
 import FormDialog from '../forms/FormDialog'
 import PromissoryNoteFields from './PromissoryNoteFields'
 import { t } from '../../lib/captions/t'
 
 // Remarks and the promissory note only. Works after payments, since money and terms stay as they are.
-export default function LoanNoteButton({ loan, className }: { loan: Loan; className: string }) {
+export default function LoanNoteButton({ loan, purposes, className }: { loan: Loan; purposes: ListOption[]; className: string }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -22,7 +22,7 @@ export default function LoanNoteButton({ loan, className }: { loan: Loan; classN
           lock={{ type: 'LOAN', id: loan.id }}
         >
           <p className="text-base text-muted">{t('UI_REMARKS_AND_NOTE_HINT')}</p>
-          <PromissoryNoteFields loan={loan} />
+          <PromissoryNoteFields loan={loan} purposes={purposes} />
         </FormDialog>
       )}
     </>

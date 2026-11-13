@@ -17,6 +17,8 @@ function noteFields(formData: FormData) {
     Remarks: text(formData, 'Remarks'),
     HasPromissoryNote: hasNote ? 1 : 0,
     PromissoryNotePath: hasNote ? text(formData, 'PromissoryNotePath') : '',
+    // Blank keeps the loan's purpose on an edit; a new loan must have one (the SP checks)
+    LoanPurposeID: text(formData, 'LoanPurposeID'),
   }
 }
 

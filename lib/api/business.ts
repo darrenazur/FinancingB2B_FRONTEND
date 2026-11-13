@@ -113,6 +113,8 @@ export const getAgentMonthly = () => report('agent-monthly')
 // Accrual statements: one row per month, and each bank loan per month (newest first)
 export const getStatements = () => report('statement')
 export const getStatementBanks = () => report('statement-bank')
+// Where the money is: outstanding principal by loan purpose (PURPOSE) and by source of income (INCOME)
+export const getConcentration = () => report('concentration')
 
 // Everything the projection reads, as exact text.
 export async function getProjectionInput() {

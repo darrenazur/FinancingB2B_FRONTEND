@@ -18,7 +18,7 @@ const SENSITIVE_FIELDS = [
 ]
 const OTHER_FIELDS = [
   'Address', 'CountryID', 'ProvinceID', 'CityID', 'ZIPCodeID', 'CountryCd', 'ContactNo', 'Email', 'TelephoneNo',
-  'RecommendedBy', 'Remarks',
+  'RecommendedBy', 'Remarks', 'IncomeSourceTypeID',
 ]
 // Sent only while "Has co-borrower?" is ticked. Unticking it on an edit removes the co-borrower.
 const COBORROWER_FIELDS = [

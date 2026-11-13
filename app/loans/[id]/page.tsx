@@ -11,7 +11,7 @@ import PageHeader from '../../../components/PageHeader'
 import StatCard from '../../../components/StatCard'
 import StatusBadge from '../../../components/StatusBadge'
 import AuditCell from '../../../components/table/AuditCell'
-import { getInstallments, getLoan, getPaymentMethods, getPayments, getPenalties, getWriteOffs, Installment } from '../../../lib/api/financing'
+import { getInstallments, getLoan, getLoanPurposes, getPaymentMethods, getPayments, getPenalties, getWriteOffs, Installment } from '../../../lib/api/financing'
 import { getCurrentUser } from '../../../lib/api/session'
 import { formatDate, formatMoney, manilaToday, sumMoney, toAmount } from '../../../lib/format'
 import { can } from '../../../lib/permissions'
@@ -57,12 +57,13 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   const loan = await getLoan(id)
   if (!loan) notFound()
 
-  const [installments, payments, penalties, methods, writeOffs] = await Promise.all([
+  const [installments, payments, penalties, methods, writeOffs, purposes] = await Promise.all([
     getInstallments(loan.id),
     getPayments(loan.id),
     getPenalties(loan.id),
     getPaymentMethods(),
     getWriteOffs(loan.id),
+    getLoanPurposes(),
   ])
 
   const isOpen = !loan.closed && !loan.deleted
@@ -111,6 +112,9 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
         {loan.backdateReason && <span className="ml-2 text-muted">{t('UI_BACKDATED_REASON', { reason: loan.backdateReason })}</span>}
       </p>
       <p className="mb-2 text-base text-body">
+        {t('UI_PURPOSE_OF_LOAN')}{': '}{loan.loanPurposeName || t('UI_NOT_SET')}
+      </p>
+      <p className="mb-2 text-base text-body">
         {t('UI_PROMISSORY_NOTE')}{': '}{loan.hasPromissoryNote ? t('UI_YES') : t('UI_NONE_ON_FILE')}
         {loan.promissoryNoteFile && (
           <a href={`/files/loan-note/${loan.id}`} target="_blank" rel="noreferrer" className="ml-3 font-medium text-accent-strong hover:underline">
@@ -123,7 +127,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
       <div className="mb-8 flex flex-wrap gap-3">
         {isOpen && can(permissions, 'payment.add') && <AddPaymentButton loanId={loan.id} loanNo={loan.loanNo} methods={methods} due={due} loanDate={loan.releaseDate.slice(0, 10)} canBackdate={can(permissions, 'payment.backdate')} />}
         <RefreshButton />
-        {!loan.deleted && can(permissions, 'loan.note') && <LoanNoteButton loan={loan} className={SECONDARY_BUTTON} />}
+        {!loan.deleted && can(permissions, 'loan.note') && <LoanNoteButton loan={loan} purposes={purposes} className={SECONDARY_BUTTON} />}
         {isOpen && can(permissions, 'loan.close') && (
           <ConfirmAction
             label={t('UI_CLOSE')}

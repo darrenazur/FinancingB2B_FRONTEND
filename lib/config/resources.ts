@@ -16,7 +16,7 @@ export interface ConfigResource {
   key: string
   label: string
   description: string
-  group: 'UI_REFERENCE_DATA' | 'UI_MASTER_DATA'
+  group: 'UI_REFERENCE_DATA' | 'UI_MASTER_DATA' | 'UI_CONFIGURATION_TABLES'
   path: string
   idField: string
   fields: ConfigField[]
@@ -174,6 +174,40 @@ export const CONFIG_RESOURCES: ConfigResource[] = [
     fields: [COUNTRY, PROVINCE, CITY, { name: 'ZipCode', label: 'UI_ZIP_CODE', type: 'text', maxLength: 20 }],
   },
 ]
+
+// Configuration tables: lists the owner keeps for the partner and loan forms. Delete only hides an item from new choices.
+CONFIG_RESOURCES.push(
+  {
+    key: 'loan-purpose',
+    label: 'UI_LOAN_PURPOSES',
+    description: 'UI_LOAN_PURPOSES_DESCRIPTION',
+    group: 'UI_CONFIGURATION_TABLES',
+    path: 'loan-purpose',
+    idField: 'LoanPurposeID',
+    fields: [{ name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 }],
+  },
+  {
+    key: 'income-source',
+    label: 'UI_INCOME_SOURCES',
+    description: 'UI_INCOME_SOURCES_DESCRIPTION',
+    group: 'UI_CONFIGURATION_TABLES',
+    path: 'income-source',
+    idField: 'IncomeSourceID',
+    fields: [{ name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 }],
+  },
+  {
+    key: 'income-source-type',
+    label: 'UI_INCOME_SOURCE_TYPES',
+    description: 'UI_INCOME_SOURCE_TYPES_DESCRIPTION',
+    group: 'UI_CONFIGURATION_TABLES',
+    path: 'income-source-type',
+    idField: 'IncomeSourceTypeID',
+    fields: [
+      { name: 'IncomeSourceID', label: 'UI_SOURCE_OF_INCOME', type: 'select', source: { resource: 'income-source', labelField: 'Name' } },
+      { name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 },
+    ],
+  },
+)
 
 export function findResource(key: string): ConfigResource | undefined {
   return CONFIG_RESOURCES.find(resource => resource.key === key)

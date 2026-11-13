@@ -40,6 +40,9 @@ export interface PartnerDetails {
   selfiePath: string
   recommendedBy: string
   remarks: string
+  // The type is what is saved (Vendor); the source follows from it (Business). '' = not set
+  incomeSourceId: string
+  incomeSourceTypeId: string
   coBorrower: CoBorrowerDetails | null
 }
 
@@ -96,6 +99,8 @@ export interface Loan extends Audit {
   paid: string
   // Oldest installment past due and still open; null = not overdue
   overdueSince: string | null
+  loanPurposeId: number | null
+  loanPurposeName: string
 }
 
 export interface Installment {
@@ -145,11 +150,22 @@ export interface Option {
   label: string
 }
 
+// An item of a Configuration-tables list. A deleted one is offered only to the record that already has it.
+export interface ListOption extends Option {
+  deleted: boolean
+}
+
+// A source of income type, with the source it belongs to (Vendor under Business)
+export interface IncomeTypeOption extends ListOption {
+  sourceId: number
+}
+
 export interface LoanLookups {
   currencies: string[]
   terms: Option[]
   tenures: Option[]
   settlements: Option[]
+  purposes: ListOption[]
 }
 
 export interface PartnerLookups {
@@ -157,6 +173,8 @@ export interface PartnerLookups {
   provinces: (Option & { countryId: number })[]
   cities: (Option & { provinceId: number })[]
   zipCodes: (Option & { cityId: number })[]
+  incomeSources: ListOption[]
+  incomeTypes: IncomeTypeOption[]
   // Field code -> required, from Partner Fields
   required: Record<string, boolean>
 }
@@ -191,6 +209,8 @@ interface PartnerRow {
   Deleted: boolean
   RecommendedBy?: string | null
   Remarks?: string | null
+  IncomeSourceID?: number | null
+  IncomeSourceTypeID?: number | null
   CoBorrower?: CoBorrowerRow | null
 }
 
@@ -244,6 +264,8 @@ interface LoanRow extends AuditRow {
   PromissoryNotePath: string | null
   TotalPaidAmt: string | null
   OverdueSince: string | null
+  LoanPurposeID?: number | null
+  LoanPurposeName?: string | null
 }
 
 interface InstallmentRow {
@@ -319,6 +341,8 @@ function toLoan(row: LoanRow): Loan {
     remarks: row.Remarks ?? '',
     hasPromissoryNote: Boolean(row.HasPromissoryNote),
     promissoryNoteFile: isFileKey(row.PromissoryNotePath) ? row.PromissoryNotePath ?? '' : '',
+    loanPurposeId: row.LoanPurposeID ?? null,
+    loanPurposeName: row.LoanPurposeName ?? '',
     paid: row.TotalPaidAmt ?? '0',
     overdueSince: row.OverdueSince ? row.OverdueSince.slice(0, 10) : null,
     ...readAudit(row),
@@ -374,6 +398,8 @@ export async function getPartnerDetails(id: number): Promise<PartnerDetails | nu
     selfiePath: row.SelfiePath ?? '',
     recommendedBy: row.RecommendedBy ?? '',
     remarks: row.Remarks ?? '',
+    incomeSourceId: row.IncomeSourceID ? String(row.IncomeSourceID) : '',
+    incomeSourceTypeId: row.IncomeSourceTypeID ? String(row.IncomeSourceTypeID) : '',
     coBorrower: row.CoBorrower ? toCoBorrower(row.CoBorrower) : null,
   }
 }
@@ -482,11 +508,12 @@ export async function getPaymentMethods(): Promise<Option[]> {
 }
 
 export async function getLoanLookups(): Promise<LoanLookups> {
-  const [currencies, terms, tenures, settlements] = await Promise.all([
+  const [currencies, terms, tenures, settlements, purposes] = await Promise.all([
     getList<LookupRow>('/currency-view'),
     getList<LookupRow>('/term-type-view'),
     getList<LookupRow>('/tenure-duration-view'),
     getList<LookupRow>('/settlement-structure-view'),
+    getLoanPurposes(),
   ])
 
   return {
@@ -494,7 +521,17 @@ export async function getLoanLookups(): Promise<LoanLookups> {
     terms: live(terms).map(row => ({ id: Number(row.TermTypeID), label: String(row.TermName) })),
     tenures: live(tenures).map(row => ({ id: Number(row.TenureDurationID), label: t('UI_MONTHS_2', { Duration: row.Duration }) })),
     settlements: live(settlements).map(row => ({ id: Number(row.SettlementStructID), label: String(row.Name) })),
+    purposes,
   }
+}
+
+// Configuration-tables lists. A list that can't be read gives no choices rather than taking the page down.
+const listOptions = (rows: LookupRow[], idField: string): ListOption[] =>
+  rows.map(row => ({ id: Number(row[idField]), label: String(row.Name), deleted: Boolean(row.Deleted) }))
+
+export async function getLoanPurposes(): Promise<ListOption[]> {
+  const rows = await getList<LookupRow>('/loan-purpose-view').catch(() => [])
+  return listOptions(rows, 'LoanPurposeID')
 }
 
 export async function getAssignableUsers(): Promise<Option[]> {
@@ -503,12 +540,14 @@ export async function getAssignableUsers(): Promise<Option[]> {
 }
 
 export async function getPartnerLookups(): Promise<PartnerLookups> {
-  const [countries, provinces, cities, zipCodes, rules] = await Promise.all([
+  const [countries, provinces, cities, zipCodes, rules, sources, types] = await Promise.all([
     getList<LookupRow>('/country-view'),
     getList<LookupRow>('/province-view'),
     getList<LookupRow>('/city-view'),
     getList<LookupRow>('/zipcode-view'),
     getPartnerFieldRules().catch(() => null),
+    getList<LookupRow>('/income-source-view').catch(() => []),
+    getList<LookupRow>('/income-source-type-view').catch(() => []),
   ])
 
   return {
@@ -532,6 +571,8 @@ export async function getPartnerLookups(): Promise<PartnerLookups> {
       label: String(row.ZipCode),
       cityId: Number(row.CityID),
     })),
+    incomeSources: listOptions(sources, 'IncomeSourceID'),
+    incomeTypes: types.map(row => ({ ...listOptions([row], 'IncomeSourceTypeID')[0], sourceId: Number(row.IncomeSourceID) })),
     required: rules ? Object.fromEntries(rules.map(rule => [rule.code, rule.required])) : FALLBACK_REQUIRED,
   }
 }

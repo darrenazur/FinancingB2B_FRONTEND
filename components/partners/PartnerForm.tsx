@@ -25,7 +25,7 @@ const BLANK: Omit<PartnerDetails, 'id'> = {
   countryId: '', provinceId: '', cityId: '', zipCodeId: '',
   contactNo: '', email: '', telephoneNo: '',
   idType1: '', idImgPath1: '', idType2: '', idImgPath2: '', selfiePath: '',
-  recommendedBy: '', remarks: '', coBorrower: null,
+  recommendedBy: '', remarks: '', incomeSourceId: '', incomeSourceTypeId: '', coBorrower: null,
 }
 
 interface PartnerFormProps {
@@ -62,6 +62,10 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
   const cities = lookups.cities.filter(item => String(item.provinceId) === values.provinceId)
   const zipCodes = lookups.zipCodes.filter(item => String(item.cityId) === values.cityId)
   const fileHref = (kind: string, value: string) => (partner && value.startsWith('partners/') ? `/files/partner/${partner.id}/${kind}` : undefined)
+  // Deleted list items stay on the partner that already has them, but aren't offered to anyone else
+  const incomeSources = lookups.incomeSources.filter(item => !item.deleted || String(item.id) === saved.incomeSourceId)
+  const incomeTypes = lookups.incomeTypes.filter(item =>
+    String(item.sourceId) === values.incomeSourceId && (!item.deleted || String(item.id) === saved.incomeSourceTypeId))
   const idTypes = (current: string) => (current && !ID_TYPES.includes(current) ? [current, ...ID_TYPES] : ID_TYPES)
   // An ID on file can be taken off on an edit, unless Partner Fields makes it required.
   const canRemove = (code: string, ...saved: (string | boolean | undefined)[]) => !isNew && !required(code) && saved.some(Boolean)
@@ -253,6 +257,32 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
       </fieldset>
 
       <p className={SECTION}>{t('UI_OTHER_DETAILS')}</p>
+      <div className={GRID}>
+        <Field label={label('UI_SOURCE_OF_INCOME', 'INCOMESOURCE')}>
+          <select
+            value={values.incomeSourceId}
+            onChange={event => setValues(current => ({ ...current, incomeSourceId: event.target.value, incomeSourceTypeId: '' }))}
+            required={required('INCOMESOURCE')}
+            className={INPUT}
+          >
+            <option value="">{t('UI_SELECT_SOURCE_OF_INCOME')}</option>
+            {incomeSources.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+        </Field>
+        <Field label={t('UI_INCOME_TYPE')}>
+          {/* Only the type is saved; the source follows from it */}
+          <select
+            {...field('incomeSourceTypeId')}
+            name="IncomeSourceTypeID"
+            required={required('INCOMESOURCE') || values.incomeSourceId !== ''}
+            disabled={values.incomeSourceId === ''}
+            className={INPUT}
+          >
+            <option value="">{t('UI_SELECT_TYPE')}</option>
+            {incomeTypes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+        </Field>
+      </div>
       <Field label={label('UI_RECOMMENDED_BY', 'RECOMMENDEDBY')}>
         <input {...field('recommendedBy')} name="RecommendedBy" required={required('RECOMMENDEDBY')} maxLength={150} className={INPUT} />
       </Field>
