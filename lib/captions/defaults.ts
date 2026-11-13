@@ -1,5 +1,6 @@
 // Generated with the UI_ rows of CAPTION. Used only when the API is down or a caption was deleted.
 export const DEFAULT_CAPTIONS: Record<string, string> = {
+  UI_APP_NAME: "AZUR Lending",
   UI_A_CHANGE_HERE_APPLIES_TO_NEW_LOANS_CHECK_EXISTING_LOANS: "A change here applies to new loans. Check existing loans before editing a value in use.",
   UI_A_CODE_MUST_MATCH_WHAT_THE_PROGRAM_SENDS_EXACTLY_A_SAVED: "A code must match what the program sends, exactly. A saved code can’t be changed. Adding a deleted code brings it back. A deleted caption goes back to the built-in wording. Changes can take up to 5 minutes to show.",
   UI_A_CURRENCY_CODE_CANT_BE_CHANGED_AFTER_IT_IS_ADDED_BECAUSE: "A currency code can’t be changed after it is added, because loans refer to it.",

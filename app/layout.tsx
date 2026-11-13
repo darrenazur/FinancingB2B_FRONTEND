@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { readTheme } from '../lib/theme'
 import './globals.css'
@@ -13,7 +13,20 @@ const inter = Inter({ subsets: ['latin'] })
 
 export async function generateMetadata(): Promise<Metadata> {
   await loadCaptions()
-  return { title: t('UI_BANKINGMS'), description: t('UI_LENDING_MANAGEMENT_SYSTEM') }
+  return {
+    title: t('UI_BANKINGMS'),
+    description: t('UI_LENDING_MANAGEMENT_SYSTEM'),
+    // Added to the iPhone home screen, it opens full screen under this name
+    appleWebApp: { capable: true, title: t('UI_APP_NAME'), statusBarStyle: 'default' },
+  }
+}
+
+// The phone's status bar matches the page background
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f5f6f8' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f1115' },
+  ],
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

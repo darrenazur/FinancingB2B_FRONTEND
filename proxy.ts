@@ -8,5 +8,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!login|_next/static|_next/image|favicon.ico).*)'],
+  // The manifest and icons hold no borrower data, and a phone fetches them before anyone signs in
+  matcher: ['/((?!login|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon).*)'],
 }
