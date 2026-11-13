@@ -129,7 +129,7 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
           {t('UI_RELEASE_DATE_CONFIRM', { date: formatDate(releaseDate), days: daysBetween(releaseDate, today) })}
         </label>
       )}
-      <PromissoryNoteFields loan={loan} />
+      <PromissoryNoteFields loan={loan} purposes={lookups.purposes} />
     </FormDialog>
   )
 }
