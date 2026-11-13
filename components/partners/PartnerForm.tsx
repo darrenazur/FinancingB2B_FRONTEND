@@ -49,6 +49,9 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
   const [accepted, setAccepted] = useState(false)
   const [consented, setConsented] = useState(false)
   const [hasCoBorrower, setHasCoBorrower] = useState(cb !== null)
+  const [removeId1, setRemoveId1] = useState(false)
+  const [removeId2, setRemoveId2] = useState(false)
+  const [removeCbId, setRemoveCbId] = useState(false)
 
   // Configuration > Partner Fields decides these. An optional field says so in its label.
   const required = (code: string) => lookups.required[code] ?? false
@@ -60,6 +63,14 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
   const zipCodes = lookups.zipCodes.filter(item => String(item.cityId) === values.cityId)
   const fileHref = (kind: string, value: string) => (partner && value.startsWith('partners/') ? `/files/partner/${partner.id}/${kind}` : undefined)
   const idTypes = (current: string) => (current && !ID_TYPES.includes(current) ? [current, ...ID_TYPES] : ID_TYPES)
+  // An ID on file can be taken off on an edit, unless Partner Fields makes it required.
+  const canRemove = (code: string, ...saved: (string | boolean | undefined)[]) => !isNew && !required(code) && saved.some(Boolean)
+  const removeBox = (name: string, checked: boolean, onChange: (checked: boolean) => void, caption = 'UI_REMOVE_THIS_ID') => (
+    <label className={`${CHECKBOX} md:col-span-2`}>
+      <input type="checkbox" name={name} checked={checked} onChange={event => onChange(event.target.checked)} className="mt-1 h-4 w-4" />
+      {t(caption)}
+    </label>
+  )
 
   return (
     <FormDialog
@@ -79,7 +90,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
         <Field label={label('UI_MOBILE_NUMBER', 'CONTACTNO')}>
           <input {...field('contactNo', digitsOnly)} name="ContactNo" inputMode="numeric" required={required('CONTACTNO')} maxLength={20} className={INPUT} />
         </Field>
-        <Field label={label('UI_TELEPHONE', 'TELEPHONE')} hint={isNew ? undefined : t('UI_A_SAVED_NUMBER_CAN_BE_CHANGED_NOT_CLEARED')}>
+        <Field label={label('UI_TELEPHONE', 'TELEPHONE')}>
           <input {...field('telephoneNo', digitsOnly)} name="TelephoneNo" inputMode="numeric" required={required('TELEPHONE')} maxLength={20} className={INPUT} />
         </Field>
       </div>
@@ -150,6 +161,9 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
           {t('UI_CHANGE_NAME_BIRTH_DATE_OR_ID_DETAILS_ANY_CHANGE_HERE_PUTS')}
         </label>
       )}
+      {/* Outside the locked section: removing an ID doesn't unlock the name or birth date, and keeps the status. */}
+      {canRemove('ID1', saved.idType1, saved.idImgPath1) && removeBox('RemoveID1', removeId1, setRemoveId1, 'UI_REMOVE_THE_ID')}
+      {canRemove('ID2', saved.idType2, saved.idImgPath2) && removeBox('RemoveID2', removeId2, setRemoveId2, 'UI_REMOVE_THE_SECOND_ID')}
       <fieldset disabled={!unlocked} className="flex flex-col gap-5">
         <div className={GRID}>
           <Field label={t('UI_FIRST_NAME')}>
@@ -170,6 +184,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
               required
             />
           </Field>
+          <fieldset disabled={removeId1} className="contents">
           <Field label={label('UI_ID_TYPE', 'ID1')}>
             <select {...field('idType1')} name="IDType1" required={isNew && required('ID1')} className={INPUT}>
               <option value="">{t('UI_SELECT_ID_TYPE')}</option>
@@ -196,6 +211,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             viewHref={fileHref('id1', values.idImgPath1)}
             required={isNew && required('ID1')}
           />
+          </fieldset>
           <FileField
             label={label('UI_SELFIE', 'SELFIE')}
             name="SelfiePath"
@@ -205,6 +221,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             viewHref={fileHref('selfie', values.selfiePath)}
             required={isNew && required('SELFIE')}
           />
+          <fieldset disabled={removeId2} className="contents">
           <Field label={label('UI_SECOND_ID_TYPE', 'ID2')}>
             <select {...field('idType2')} name="IDType2" required={isNew && required('ID2')} className={INPUT}>
               <option value="">{t('UI_NONE')}</option>
@@ -231,14 +248,15 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             viewHref={fileHref('id2', values.idImgPath2)}
             required={isNew && required('ID2')}
           />
+          </fieldset>
         </div>
       </fieldset>
 
       <p className={SECTION}>{t('UI_OTHER_DETAILS')}</p>
-      <Field label={label('UI_RECOMMENDED_BY', 'RECOMMENDEDBY')} hint={isNew ? undefined : t('UI_A_SAVED_VALUE_CAN_BE_CHANGED_NOT_CLEARED')}>
+      <Field label={label('UI_RECOMMENDED_BY', 'RECOMMENDEDBY')}>
         <input {...field('recommendedBy')} name="RecommendedBy" required={required('RECOMMENDEDBY')} maxLength={150} className={INPUT} />
       </Field>
-      <Field label={label('UI_REMARKS', 'REMARKS')} hint={isNew ? undefined : t('UI_A_SAVED_VALUE_CAN_BE_CHANGED_NOT_CLEARED')}>
+      <Field label={label('UI_REMARKS', 'REMARKS')}>
         <textarea {...field('remarks')} name="Remarks" required={required('REMARKS')} maxLength={500} rows={3} className={INPUT} />
       </Field>
 
@@ -288,6 +306,8 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
           <Field label={label('UI_STREET_ADDRESS', 'CB_ADDRESS')}>
             <input {...field('cbAddress')} name="CBAddress" required={required('CB_ADDRESS')} maxLength={200} className={INPUT} />
           </Field>
+          {canRemove('CB_ID', cb?.idType, cb?.idImgPath, cb?.hasIdNumber) && removeBox('CBRemoveID', removeCbId, setRemoveCbId)}
+          <fieldset disabled={removeCbId} className="contents">
           <Field label={label('UI_ID_TYPE', 'CB_ID')}>
             <select {...field('cbIdType')} name="CBIDType" required={required('CB_ID')} className={INPUT}>
               <option value="">{t('UI_SELECT_ID_TYPE')}</option>
@@ -314,6 +334,7 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
             viewHref={fileHref('cbid', values.cbIdImgPath)}
             required={required('CB_ID') && !cb?.idImgPath}
           />
+          </fieldset>
         </div>
       )}
 
