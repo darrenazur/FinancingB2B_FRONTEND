@@ -1,7 +1,8 @@
 'use client'
 
-import { FormEvent, startTransition, useActionState, useState } from 'react'
+import { FormEvent, startTransition, useActionState, useEffect, useState } from 'react'
 import { login, LoginState } from '../app/login/actions'
+import { clearSavedViews } from '../lib/savedViews'
 import { Field, INPUT } from './forms/FormDialog'
 import { t } from '../lib/captions/t'
 
@@ -11,6 +12,9 @@ export default function LoginForm({ expired }: { expired: boolean }) {
   const [state, formAction, pending] = useActionState(login, INITIAL)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+
+  // A new sign-in starts every screen fresh, whoever used this browser last.
+  useEffect(() => clearSavedViews(), [])
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

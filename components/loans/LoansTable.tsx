@@ -81,6 +81,13 @@ const BASE_COLUMNS: Column<Loan>[] = [
     ),
   },
   {
+    key: 'started',
+    label: 'UI_DATE_STARTED',
+    text: loan => formatDate(loan.releaseDate),
+    render: loan => <span className="whitespace-nowrap">{formatDate(loan.releaseDate)}</span>,
+    compare: (a, b) => a.releaseDate.localeCompare(b.releaseDate),
+  },
+  {
     key: 'maturity',
     label: 'UI_MATURITY',
     text: loan => formatDate(loan.maturityDate),
@@ -159,7 +166,7 @@ export default function LoansTable({ loans, verifiedPartners, lookups, users, pe
         }
         searchLabel={t('UI_SEARCH_LOANS')}
         emptyText={t('UI_NO_LOANS_YET')}
-        minWidth="1600px"
+        minWidth="1720px"
         defaultSort={NEWEST_FIRST}
         rowActions={loan => (
           <div className="flex justify-end gap-2.5">
