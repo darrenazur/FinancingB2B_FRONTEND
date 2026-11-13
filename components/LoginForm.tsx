@@ -32,7 +32,7 @@ export default function LoginForm({ expired }: { expired: boolean }) {
       <h1 className="text-3xl font-semibold tracking-tight text-ink">{t('UI_SIGN_IN')}</h1>
       {expired && !state.error && <p className="mt-3 text-base text-body">{t('UI_YOUR_SESSION_ENDED_SIGN_IN_AGAIN')}</p>}
 
-      <form onSubmit={submit} className="mt-7 flex flex-col gap-5">
+      <form method="post" onSubmit={submit}className="mt-7 flex flex-col gap-5">
         <Field label={t('UI_USERNAME')}>
           <input
             name="username"

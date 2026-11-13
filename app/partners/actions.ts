@@ -16,7 +16,15 @@ const SENSITIVE_FIELDS = [
   'FirstName', 'MiddleName', 'LastName', 'BirthDate',
   'IDType1', 'IDNo1', 'IDImgPath1', 'IDType2', 'IDNo2', 'IDImgPath2', 'SelfiePath',
 ]
-const OTHER_FIELDS = ['Address', 'CountryID', 'ProvinceID', 'CityID', 'ZIPCodeID', 'CountryCd', 'ContactNo', 'Email', 'TelephoneNo']
+const OTHER_FIELDS = [
+  'Address', 'CountryID', 'ProvinceID', 'CityID', 'ZIPCodeID', 'CountryCd', 'ContactNo', 'Email', 'TelephoneNo',
+  'RecommendedBy', 'Remarks',
+]
+// Sent only while "Has co-borrower?" is ticked. Unticking it on an edit removes the co-borrower.
+const COBORROWER_FIELDS = [
+  'CBFirstName', 'CBMiddleName', 'CBLastName', 'CBBirthDate', 'CBRelationship', 'CBContactNo', 'CBEmail', 'CBAddress',
+  'CBIDType', 'CBIDNo', 'CBIDImgPath',
+]
 
 function refresh() {
   revalidatePath('/partners')
@@ -38,10 +46,13 @@ export async function loadPartner(id: number): Promise<PartnerDetails | null> {
 
 export async function savePartner(id: number | null, _previous: SaveState, formData: FormData): Promise<SaveState> {
   const sensitive = id === null || formData.get('UpdateSensitiveData') === 'on'
+  const hasCoBorrower = formData.get('HasCoBorrower') === 'on'
   // Blank means "keep current" on update, so locked fields are sent blank.
   const payload = {
     ...readFields(formData, OTHER_FIELDS),
     ...readFields(sensitive ? formData : new FormData(), SENSITIVE_FIELDS),
+    ...(hasCoBorrower ? readFields(formData, COBORROWER_FIELDS) : {}),
+    HasCoBorrower: hasCoBorrower,
   }
 
   try {

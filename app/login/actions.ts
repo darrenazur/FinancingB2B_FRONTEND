@@ -1,6 +1,6 @@
 'use server'
 
-import { redirect } from 'next/navigation'
+import { redirect, RedirectType } from 'next/navigation'
 import { signIn, signOut } from '../../lib/api/session'
 import { t } from '../../lib/captions/t'
 
@@ -20,7 +20,8 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     return { error: t('UI_CANT_REACH_THE_API_CHECK_THAT_IT_IS_RUNNING') }
   }
 
-  redirect('/dashboard')
+  // Replace, so Back from the dashboard doesn't land on the login form again.
+  redirect('/dashboard', RedirectType.replace)
 }
 
 export async function logout() {

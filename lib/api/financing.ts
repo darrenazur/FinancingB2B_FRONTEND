@@ -38,6 +38,32 @@ export interface PartnerDetails {
   idType2: string
   idImgPath2: string
   selfiePath: string
+  recommendedBy: string
+  remarks: string
+  coBorrower: CoBorrowerDetails | null
+}
+
+// The co-borrower's ID number never leaves the API; hasIdNumber says whether one is saved.
+export interface CoBorrowerDetails {
+  firstName: string
+  middleName: string
+  lastName: string
+  birthDate: string
+  relationship: string
+  contactNo: string
+  email: string
+  address: string
+  idType: string
+  idImgPath: string
+  hasIdNumber: boolean
+}
+
+// One row of Configuration > Partner Fields. code is what the API and the SPs use, like EMAIL or CB_ID.
+export interface PartnerFieldRule {
+  code: string
+  section: 'PARTNER' | 'COBORROWER'
+  label: string
+  required: boolean
 }
 
 export interface Loan extends Audit {
@@ -131,6 +157,8 @@ export interface PartnerLookups {
   provinces: (Option & { countryId: number })[]
   cities: (Option & { provinceId: number })[]
   zipCodes: (Option & { cityId: number })[]
+  // Field code -> required, from Partner Fields
+  required: Record<string, boolean>
 }
 
 interface PartnerAuditRow extends AuditRow {
@@ -161,7 +189,34 @@ interface PartnerRow {
   HasIDNumber: number
   AssignedUserID: number | null
   Deleted: boolean
+  RecommendedBy?: string | null
+  Remarks?: string | null
+  CoBorrower?: CoBorrowerRow | null
 }
+
+interface CoBorrowerRow {
+  FirstName: string | null
+  MiddleName: string | null
+  LastName: string | null
+  BirthDate: string | null
+  Relationship: string | null
+  ContactNo: string | null
+  Email: string | null
+  Address: string | null
+  IDType: string | null
+  IDImgPath: string | null
+  HasIDNumber: number
+}
+
+interface FieldRuleRow {
+  FieldCd: string
+  Section: 'PARTNER' | 'COBORROWER'
+  LabelCd: string
+  IsRequired: boolean
+}
+
+// The rules before Partner Fields existed. Used only if the rules can't be read, so the form never asks for less.
+const FALLBACK_REQUIRED: Record<string, boolean> = { EMAIL: true, CONTACTNO: true, ID1: true }
 
 interface LoanRow extends AuditRow {
   FinancingInformationID: number
@@ -317,7 +372,31 @@ export async function getPartnerDetails(id: number): Promise<PartnerDetails | nu
     idType2: row.IDType2 ?? '',
     idImgPath2: row.IDImgPath2 ?? '',
     selfiePath: row.SelfiePath ?? '',
+    recommendedBy: row.RecommendedBy ?? '',
+    remarks: row.Remarks ?? '',
+    coBorrower: row.CoBorrower ? toCoBorrower(row.CoBorrower) : null,
   }
+}
+
+function toCoBorrower(row: CoBorrowerRow): CoBorrowerDetails {
+  return {
+    firstName: row.FirstName ?? '',
+    middleName: row.MiddleName ?? '',
+    lastName: row.LastName ?? '',
+    birthDate: row.BirthDate?.slice(0, 10) ?? '',
+    relationship: row.Relationship ?? '',
+    contactNo: row.ContactNo ?? '',
+    email: row.Email ?? '',
+    address: row.Address ?? '',
+    idType: row.IDType ?? '',
+    idImgPath: row.IDImgPath ?? '',
+    hasIdNumber: Boolean(row.HasIDNumber),
+  }
+}
+
+export async function getPartnerFieldRules(): Promise<PartnerFieldRule[]> {
+  const rows = await getList<FieldRuleRow>('/partner-field-rule-view')
+  return rows.map(row => ({ code: row.FieldCd, section: row.Section, label: row.LabelCd, required: Boolean(row.IsRequired) }))
 }
 
 export async function getLoans(): Promise<Loan[]> {
@@ -424,11 +503,12 @@ export async function getAssignableUsers(): Promise<Option[]> {
 }
 
 export async function getPartnerLookups(): Promise<PartnerLookups> {
-  const [countries, provinces, cities, zipCodes] = await Promise.all([
+  const [countries, provinces, cities, zipCodes, rules] = await Promise.all([
     getList<LookupRow>('/country-view'),
     getList<LookupRow>('/province-view'),
     getList<LookupRow>('/city-view'),
     getList<LookupRow>('/zipcode-view'),
+    getPartnerFieldRules().catch(() => null),
   ])
 
   return {
@@ -452,5 +532,6 @@ export async function getPartnerLookups(): Promise<PartnerLookups> {
       label: String(row.ZipCode),
       cityId: Number(row.CityID),
     })),
+    required: rules ? Object.fromEntries(rules.map(rule => [rule.code, rule.required])) : FALLBACK_REQUIRED,
   }
 }

@@ -12,6 +12,10 @@ const SECURITY = [
   { href: '/config/roles', label: 'UI_ROLES', description: 'UI_WHAT_EACH_ROLE_CAN_DO', permission: 'role.manage' },
   { href: '/config/locks', label: 'UI_LOCKS', description: 'UI_RECORDS_BEING_EDITED_NOW', permission: 'lock.release' },
 ]
+// Rules that change how other screens behave, rather than lists of values
+const CONFIG_TABLES = [
+  { href: '/config/partner-fields', label: 'UI_PARTNER_FIELDS', description: 'UI_PARTNER_FIELDS_DESCRIPTION' },
+]
 
 export default async function ConfigPage() {
   const permissions = (await getCurrentUser())?.permissions ?? []
@@ -58,6 +62,24 @@ export default async function ConfigPage() {
           </div>
         </section>
       ))}
+
+      {showLists && (
+        <section className="mb-10">
+          <h2 className="mb-4 text-xl font-semibold tracking-tight text-ink">{t('UI_CONFIGURATION_TABLES')}</h2>
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {CONFIG_TABLES.map(item => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-2xl border border-line bg-surface p-7 transition-colors hover:border-accent"
+              >
+                <p className="text-lg font-semibold text-ink">{t(item.label)}</p>
+                <p className="mt-1 text-base text-body">{t(item.description)}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   )
 }
