@@ -321,6 +321,7 @@ export const DEFAULT_CAPTIONS: Record<string, string> = {
   UI_LAST_CASH_COUNT: "Last cash count on {date}: {counted} counted, {expected} expected. Difference: {gap}.",
   UI_LAST_NAME: "Last name",
   UI_LAST_RATED: "Last: {rating} of 5, by {by} on {date}",
+  UI_LAST_REMARKS: "Last remarks: “{remarks}” by {by} on {date}",
   UI_LATE_FEES: "Late fees",
   UI_LATE_FEES_COLLECTED: "Late fees collected",
   UI_LATE_FEES_RECEIVABLE: "Late fees receivable",
