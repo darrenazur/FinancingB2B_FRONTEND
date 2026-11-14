@@ -166,6 +166,25 @@ export interface LoanLookups {
   tenures: Option[]
   settlements: Option[]
   purposes: ListOption[]
+  // Partner id -> grade, score and suggested max, for the hint beside the partner
+  scores: Record<number, ScoreSummary>
+}
+
+// Credit score, worked out live by PARTNERSCORE_VW. Grade NEW = nothing due yet.
+export interface ScoreSummary {
+  grade: string
+  finalScore: number
+  suggestedMax: string
+}
+
+// Every count, point and setting behind a score, so the screen can show the working.
+export type ScoreRow = Record<string, number | string | null>
+
+export interface ScoreDetails {
+  score: ScoreRow
+  kpis: Option[]
+  // rating null = cleared back to Not rated
+  ratings: { kpiId: number; kpiName: string; rating: number | null; remarks: string; ratedBy: string; ratedDt: string }[]
 }
 
 export interface PartnerLookups {
@@ -508,12 +527,13 @@ export async function getPaymentMethods(): Promise<Option[]> {
 }
 
 export async function getLoanLookups(): Promise<LoanLookups> {
-  const [currencies, terms, tenures, settlements, purposes] = await Promise.all([
+  const [currencies, terms, tenures, settlements, purposes, scores] = await Promise.all([
     getList<LookupRow>('/currency-view'),
     getList<LookupRow>('/term-type-view'),
     getList<LookupRow>('/tenure-duration-view'),
     getList<LookupRow>('/settlement-structure-view'),
     getLoanPurposes(),
+    getPartnerScores(),
   ])
 
   return {
@@ -522,6 +542,39 @@ export async function getLoanLookups(): Promise<LoanLookups> {
     tenures: live(tenures).map(row => ({ id: Number(row.TenureDurationID), label: t('UI_MONTHS_2', { Duration: row.Duration }) })),
     settlements: live(settlements).map(row => ({ id: Number(row.SettlementStructID), label: String(row.Name) })),
     purposes,
+    scores,
+  }
+}
+
+// Scores of every partner the user can see. A score that can't be read leaves the grade blank, never the page down.
+export async function getPartnerScores(): Promise<Record<number, ScoreSummary>> {
+  const rows = await getList<LookupRow>('/partner-score-view').catch(() => [])
+  return Object.fromEntries(rows.map(row => [Number(row.PartnerProfileID), {
+    grade: String(row.Grade),
+    finalScore: Number(row.FinalScore),
+    suggestedMax: String(row.SuggestedMax ?? '0'),
+  }]))
+}
+
+// Every number behind each visible partner's score, for the Credit Score page
+export async function getPartnerScoreRows(): Promise<ScoreRow[]> {
+  return getList<ScoreRow>('/partner-score-view').catch(() => [])
+}
+
+export async function getPartnerScoreDetails(id: number): Promise<ScoreDetails | null> {
+  const body = await getRecord<{ Score: ScoreRow; Kpis: LookupRow[]; Ratings: LookupRow[] }>(`/partner-score/${id}`)
+  if (!body) return null
+  return {
+    score: body.Score,
+    kpis: body.Kpis.map(row => ({ id: Number(row.PartnerKpiID), label: String(row.Name) })),
+    ratings: body.Ratings.filter(row => !row.KpiDeleted).map(row => ({
+      kpiId: Number(row.PartnerKpiID),
+      kpiName: String(row.KpiName),
+      rating: row.Rating === null || row.Rating === undefined ? null : Number(row.Rating),
+      remarks: String(row.Remarks ?? ''),
+      ratedBy: String(row.RatedBy ?? ''),
+      ratedDt: String(row.RatedDt ?? ''),
+    })),
   }
 }
 

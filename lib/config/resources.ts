@@ -207,6 +207,15 @@ CONFIG_RESOURCES.push(
       { name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 },
     ],
   },
+  {
+    key: 'partner-kpi',
+    label: 'UI_PARTNER_KPIS',
+    description: 'UI_PARTNER_KPIS_DESCRIPTION',
+    group: 'UI_CONFIGURATION_TABLES',
+    path: 'partner-kpi',
+    idField: 'PartnerKpiID',
+    fields: [{ name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 }],
+  },
 )
 
 export function findResource(key: string): ConfigResource | undefined {
