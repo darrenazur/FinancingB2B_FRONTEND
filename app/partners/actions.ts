@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { send } from '../../lib/api/client'
-import { getPartnerDetails, PartnerDetails } from '../../lib/api/financing'
+import { getPartnerDetails, getPartnerScoreDetails, PartnerDetails, ScoreDetails } from '../../lib/api/financing'
 import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
 import { LockTarget } from '../../lib/lock'
@@ -154,6 +154,37 @@ export async function deletePartner(id: number): Promise<SaveState> {
   try {
     const result = await send('DELETE', '/partner-profile-delete', {
       PartnerProfileID: id,
+    })
+    if (!result.ok) return { ok: false, error: readableError(result.message) }
+  } catch {
+    return notReachable()
+  }
+
+  refresh()
+  return { ok: true, error: null }
+}
+
+export async function loadPartnerScore(id: number): Promise<ScoreDetails | null> {
+  try {
+    return await getPartnerScoreDetails(id)
+  } catch {
+    return null
+  }
+}
+
+// The owner's 1-5 rating per KPI (partner.rate). Each save adds a new rating; the newest counts.
+export async function ratePartnerKpis(id: number, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  // Every KPI is sent; "Not rated" (blank) clears that KPI's rating, which then stops counting in the score
+  const ratings = [...formData.entries()]
+    .filter(([name]) => name.startsWith('Kpi_'))
+    .map(([name, value]) => ({ PartnerKpiID: Number(name.slice(4)), Rating: String(value) === '' ? null : Number(value) }))
+  if (ratings.length === 0) return { ok: false, error: t('UI_RATE_AT_LEAST_ONE_KPI') }
+
+  try {
+    const result = await send('PUT', '/partner-kpi-rate', {
+      PartnerProfileID: id,
+      Ratings: ratings,
+      Remarks: String(formData.get('Remarks') ?? '').trim(),
     })
     if (!result.ok) return { ok: false, error: readableError(result.message) }
   } catch {

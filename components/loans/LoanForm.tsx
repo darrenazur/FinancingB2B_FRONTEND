@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { saveLoan } from '../../app/loans/actions'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
-import { daysBetween, formatDate, manilaToday } from '../../lib/format'
+import { daysBetween, formatDate, formatMoney, manilaToday } from '../../lib/format'
 import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
@@ -26,7 +26,7 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
   const savedDate = loan?.releaseDate.slice(0, 10) ?? today
   const [releaseDate, setReleaseDate] = useState(savedDate)
   const [confirmed, setConfirmed] = useState(false)
-  const { field } = useFields({
+  const { values, field } = useFields({
     PartnerProfileID: loan ? String(loan.partnerId) : '',
     // The API stores five decimals and takes two.
     PrincipalAmt: loan ? loan.principal.replace(/(\.\d{2})\d*$/, '$1') : '',
@@ -37,6 +37,15 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
     SettlementStructID: loan ? String(loan.settlementId) : '',
     BackdateReason: '',
   })
+
+  // The chosen partner's credit score, as advice only: any amount can still be saved
+  const score = lookups.scores[Number(values.PartnerProfileID)]
+  const scoreHint = score
+    ? t('UI_LOAN_SCORE_HINT', {
+        grade: score.grade === 'NEW' ? t('UI_GRADE_NEW') : t('UI_GRADE_AND_SCORE', { grade: score.grade, score: String(Number(score.finalScore.toFixed(2))) }),
+        max: formatMoney(score.suggestedMax),
+      })
+    : undefined
 
   return (
     <FormDialog
@@ -54,7 +63,7 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
           </Field>
         </>
       ) : (
-        <Field label={t('UI_PARTNER')} hint={t('UI_ONLY_VERIFIED_PARTNERS_CAN_BORROW')}>
+        <Field label={t('UI_PARTNER')} hint={scoreHint ?? t('UI_ONLY_VERIFIED_PARTNERS_CAN_BORROW')}>
           <select {...field('PartnerProfileID')} required className={INPUT}>
             <option value="">{t('UI_SELECT_PARTNER')}</option>
             {partners.map(partner => <option key={partner.id} value={partner.id}>{partner.label}</option>)}

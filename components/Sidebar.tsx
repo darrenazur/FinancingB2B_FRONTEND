@@ -11,6 +11,7 @@ import { t } from '../lib/captions/t'
 const NAV = [
   { href: '/dashboard', label: 'UI_OVERVIEW', icon: 'M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z' },
   { href: '/partners', label: 'UI_PARTNERS', permissions: ['partner.view'], icon: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 10.5a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5ZM20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.2a3.25 3.25 0 0 1 0 6.1' },
+  { href: '/credit-score', label: 'UI_CREDIT_SCORE', permissions: ['partner.view'], icon: 'M4 19h16M7 16V11m5 5V7m5 9v-3' },
   { href: '/loans', label: 'UI_LOANS', permissions: ['loan.view'], icon: 'M4 7h16v11H4V7Zm0 4h16M8 15h3' },
   { href: '/business', label: 'UI_BUSINESS', permissions: ['business.view'], icon: 'M4 8h16v11H4V8Zm5 0V5h6v3M4 13h16' },
   { href: '/config', label: 'UI_CONFIGURATION_2', permissions: ['config.view', 'user.manage', 'role.manage', 'lock.release'], icon: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4' },

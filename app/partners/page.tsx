@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import PageHeader from '../../components/PageHeader'
 import type { LoanStats } from '../../components/partners/AssignPartnersDialog'
 import PartnersTable from '../../components/partners/PartnersTable'
-import { getAssignableUsers, getLoans, getPartnerLookups, getPartners, Loan } from '../../lib/api/financing'
+import { getAssignableUsers, getLoans, getPartnerLookups, getPartners, getPartnerScores, Loan } from '../../lib/api/financing'
 import { getCurrentUser } from '../../lib/api/session'
 import { sumMoney, toAmount } from '../../lib/format'
 import { can } from '../../lib/permissions'
@@ -26,18 +26,19 @@ export default async function PartnersPage() {
   if (!can(permissions, 'partner.view')) redirect('/dashboard')
 
   const canAssign = can(permissions, 'partner.assign')
-  const [partners, lookups, users, loans] = await Promise.all([
+  const [partners, lookups, users, loans, scores] = await Promise.all([
     getPartners(),
     getPartnerLookups(),
     canAssign ? getAssignableUsers() : [],
     // Without loan.view the assign window shows 0 open loans.
     canAssign && can(permissions, 'loan.view') ? getLoans().catch(() => []) : [],
+    getPartnerScores(),
   ])
 
   return (
     <>
       <PageHeader title={t('UI_PARTNERS')} description={t('UI_ON_RECORD', { count: partners.length })} />
-      <PartnersTable partners={partners} lookups={lookups} users={users} loanStats={loanStatsOf(loans)} permissions={permissions} />
+      <PartnersTable partners={partners} lookups={lookups} users={users} loanStats={loanStatsOf(loans)} scores={scores} permissions={permissions} />
     </>
   )
 }

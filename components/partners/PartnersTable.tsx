@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState, useTransition } from 'react'
 import { deletePartner, loadPartner } from '../../app/partners/actions'
-import type { Option, Partner, PartnerDetails, PartnerLookups } from '../../lib/api/financing'
+import type { Option, Partner, PartnerDetails, PartnerLookups, ScoreSummary } from '../../lib/api/financing'
 import { can } from '../../lib/permissions'
 import ConfirmAction from '../actions/ConfirmAction'
 import RefreshButton from '../actions/RefreshButton'
@@ -11,6 +12,7 @@ import StatusBadge from '../StatusBadge'
 import { auditColumns, NEWEST_FIRST } from '../table/auditColumns'
 import DataTable, { Column } from '../table/DataTable'
 import AssignPartnersDialog, { LoanStats } from './AssignPartnersDialog'
+import GradeBadge from './GradeBadge'
 import PartnerForm from './PartnerForm'
 import VerificationAction from './VerificationAction'
 import { t } from '../../lib/captions/t'
@@ -64,10 +66,14 @@ interface PartnersTableProps {
   lookups: PartnerLookups
   users: Option[]
   loanStats: Record<number, LoanStats>
+  scores: Record<number, ScoreSummary>
   permissions: string[]
 }
 
-export default function PartnersTable({ partners, lookups, users, loanStats, permissions }: PartnersTableProps) {
+// Grades sort A first, then B to E, then NEW
+const GRADE_ORDER: Record<string, number> = { A: 1, B: 2, C: 3, D: 4, E: 5, NEW: 6 }
+
+export default function PartnersTable({ partners, lookups, users, loanStats, scores, permissions }: PartnersTableProps) {
   const [form, setForm] = useState<PartnerDetails | 'new' | null>(null)
   const [assigning, setAssigning] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -76,11 +82,21 @@ export default function PartnersTable({ partners, lookups, users, loanStats, per
   // Only users who can assign see who each partner is assigned to.
   const canAssign = can(permissions, 'partner.assign')
   const columns = useMemo<Column<Partner>[]>(() => {
-    if (!canAssign) return [...BASE_COLUMNS, ...RECORD_COLUMNS]
+    // Credit score (live from PARTNERSCORE_VW); the Score button shows how it was worked out
+    const grade: Column<Partner> = {
+      key: 'grade',
+      label: 'UI_GRADE',
+      filter: 'select',
+      text: partner => scores[partner.id]?.grade ?? '',
+      render: partner => scores[partner.id] ? <GradeBadge grade={scores[partner.id].grade} score={scores[partner.id].finalScore} /> : null,
+      compare: (a, b) => (GRADE_ORDER[scores[a.id]?.grade] ?? 9) - (GRADE_ORDER[scores[b.id]?.grade] ?? 9)
+        || (scores[b.id]?.finalScore ?? 0) - (scores[a.id]?.finalScore ?? 0),
+    }
+    if (!canAssign) return [...BASE_COLUMNS, grade, ...RECORD_COLUMNS]
     const assignedTo = (partner: Partner) =>
       partner.assignedUserId === null ? t('UI_UNASSIGNED') : users.find(user => user.id === partner.assignedUserId)?.label ?? '—'
-    return [...BASE_COLUMNS, { key: 'assigned', label: 'UI_ASSIGNED_TO', filter: 'select', text: assignedTo }, ...RECORD_COLUMNS]
-  }, [canAssign, users])
+    return [...BASE_COLUMNS, grade, { key: 'assigned', label: 'UI_ASSIGNED_TO', filter: 'select', text: assignedTo }, ...RECORD_COLUMNS]
+  }, [canAssign, users, scores])
 
   const openEdit = (id: number) => {
     setLoadError(null)
@@ -126,6 +142,9 @@ export default function PartnersTable({ partners, lookups, users, loanStats, per
         defaultSort={NEWEST_FIRST}
         rowActions={partner => !partner.deleted && (
           <div className="flex justify-end gap-2.5">
+            <Link href={`/credit-score?p=${partner.id}#p${partner.id}`} className={ROW_BUTTON_NEUTRAL} aria-label={t('UI_CREDIT_SCORE_OF', { name: partner.name })}>
+              {t('UI_SCORE')}
+            </Link>
             {can(permissions, 'partner.verify') && <VerificationAction partner={partner} />}
             {can(permissions, 'partner.edit') && (
               <button
