@@ -7,6 +7,7 @@ import { BizField, BizResource, BizSource } from '../../lib/business/resources'
 import { manilaToday } from '../../lib/format'
 import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, digitsOnly, Field, INPUT } from '../forms/FormDialog'
+import TablePicker from '../forms/TablePicker'
 import { trimNumber } from './display'
 import { t } from '../../lib/captions/t'
 
@@ -105,6 +106,10 @@ export default function BizForm({ resource, row, title, options, onClose }: BizF
         )
       case 'select': {
         const fixed = Boolean(row && field.fixedOnEdit)
+        if (field.picker && !fixed) {
+          return <TablePicker name={field.name} value={value} required={field.required} headers={field.picker.map(code => t(code))}
+            options={field.source ? options[field.source] ?? [] : []} onChange={picked => set(field.name, picked)} />
+        }
         return (
           <>
             <select {...common} disabled={fixed} onChange={event => set(field.name, event.target.value)} className={INPUT}>

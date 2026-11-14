@@ -16,6 +16,8 @@ export interface BizField {
   onlyForCategory?: string[]
   // A saved record keeps this value; to move it, delete the record and add it again.
   fixedOnEdit?: boolean
+  // A select that opens a sortable table instead: one caption code per column, matching the options' cells.
+  picker?: string[]
 }
 
 export interface BizColumn {
@@ -279,7 +281,8 @@ export const BIZ_RESOURCES: BizResource[] = [
     sources: ['cbf', 'cbfLoan'],
     fields: [
       { name: 'BizCbfID', label: 'UI_CBF_CONTRACT', type: 'select', source: 'cbf', required: true, fixedOnEdit: true },
-      { name: 'FinancingInformationID', label: 'UI_LOAN_NUMBER', type: 'select', source: 'cbfLoan', required: true, fixedOnEdit: true },
+      { name: 'FinancingInformationID', label: 'UI_LOAN_NUMBER', type: 'select', source: 'cbfLoan', required: true, fixedOnEdit: true,
+        picker: ['UI_LOAN_NUMBER', 'UI_CLIENT', 'UI_AVAILABLE', 'UI_GRADE', 'UI_SUGGESTED_MAX'] },
       { name: 'Amount', label: 'UI_AMOUNT', type: 'money', required: true, hint: 'UI_CBF_LOAN_AMOUNT_HINT' },
       { name: 'AddedDate', label: 'UI_DATE_ADDED', type: 'date', required: true, fixedOnEdit: true },
       remarks,
