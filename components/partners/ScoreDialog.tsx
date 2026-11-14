@@ -53,6 +53,7 @@ export default function ScoreDialog({ partnerId, name, canRate, onClose }: Score
 function ScoreContent({ details, canRate }: { details: ScoreDetails; canRate: boolean }) {
   const { score, kpis, ratings } = details
   const latest = new Map(ratings.map(rating => [rating.kpiId, rating]))
+  const lastRemark = [...ratings].filter(rating => rating.remarks).sort((a, b) => b.ratedDt.localeCompare(a.ratedDt))[0]
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,6 +72,11 @@ function ScoreContent({ details, canRate }: { details: ScoreDetails; canRate: bo
 
       <section className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold text-ink">{t('UI_KPI_RATINGS')}</h3>
+        {lastRemark && (
+          <p className="rounded-xl bg-page px-4 py-3 text-base text-body">
+            {t('UI_LAST_REMARKS', { remarks: lastRemark.remarks, by: lastRemark.ratedBy, date: formatDate(lastRemark.ratedDt) })}
+          </p>
+        )}
         {kpis.length === 0 && <p className="text-base text-muted">{t('UI_NO_KPIS_YET')}</p>}
         <div className="grid gap-4 md:grid-cols-2">
           {kpis.map(kpi => {

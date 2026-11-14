@@ -25,6 +25,7 @@ const MESSAGES: Record<string, string> = {
   ERR_KPI_NOT_VALID: 'Choose a KPI from the list.',
   ERR_KPI_RATING_NOT_VALID: 'A rating must be 1 to 5.',
   ERR_KPI_RATING_REQUIRED: 'Rate at least one KPI.',
+  ERR_KPI_REMARKS_NEED_RATING: 'Remarks are saved with the ratings. Rate at least one KPI first.',
   ERR_LOAN_PURPOSE_NOT_VALID: 'Choose a purpose from the list.',
   ERR_LOAN_PURPOSE_REQUIRED: 'Choose the purpose of the loan.',
   ERR_LOCK_LOST: 'Your edit time ended, or an administrator released this record. Your changes were not saved. Close this window and open it again.',
