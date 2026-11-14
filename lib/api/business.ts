@@ -20,6 +20,9 @@ export interface BizOption {
   value: string
   label: string
   code: string
+  // Picker tables only: one cell per column; sort is the raw number when text would sort wrong (money)
+  cells?: { text: string; sort?: number }[]
+  warn?: boolean
 }
 
 export interface BizFund {
@@ -89,8 +92,19 @@ async function optionsFor(source: BizSource): Promise<BizOption[]> {
           label: [
             cell(row.LoanNo), cell(row.ClientName), t('UI_AVAILABLE_AMOUNT', { amount: formatMoney(cell(row.Available)) }),
             row.IsOverdue ? t('UI_OVERDUE') : '',
+            row.Grade ? t('UI_GRADE_X', { grade: cell(row.Grade) }) : '',
+            row.SuggestedMax ? t('UI_MAX_AMOUNT', { amount: formatMoney(cell(row.SuggestedMax)) }) : '',
+            row.Grade && !['A', 'B'].includes(cell(row.Grade)) ? t('UI_CBF_NOT_ADVISED') : '',
           ].filter(Boolean).join(' · '),
           code: '',
+          cells: [
+            { text: cell(row.LoanNo) },
+            { text: cell(row.ClientName) },
+            { text: formatMoney(cell(row.Available)), sort: Number(cell(row.Available)) },
+            { text: cell(row.Grade) },
+            { text: formatMoney(cell(row.SuggestedMax)), sort: Number(cell(row.SuggestedMax)) },
+          ],
+          warn: Boolean(row.Grade) && !['A', 'B'].includes(cell(row.Grade)),
         }))
   }
 }
