@@ -91,6 +91,26 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   const writtenOff = writeOffs.find(item => !item.undoneDate)
   const canWriteOff = isOpen && can(permissions, 'loan.writeoff')
   const writeOffFrom = [loan.releaseDate, ...payments.map(item => item.date)].map(value => value.slice(0, 10)).sort().at(-1)
+  // Loan terms: the saved rates, what the borrower pays in all, and the installments that make it up
+  const rate = (value: number) => `${Number(value.toFixed(2))}%`
+  const amounts = owed.map(item => sumMoney([item.principal, item.interest]))
+  const sameAmount = amounts.length > 0 && amounts.every(value => value === amounts[0])
+  const terms: [string, string][] = [
+    ['UI_INTEREST_RATE', t('UI_RATE_A_MONTH', { rate: rate(loan.monthlyRate), structure: loan.settlementName })],
+    ['UI_EFFECTIVE_INTEREST_RATE', loan.effectiveRate === null ? '—' : t('UI_EFFECTIVE_RATE_VALUE', { month: rate(loan.effectiveRate), year: rate(loan.effectiveRate * 12) })],
+    ...(loan.processingFeeType ? [['UI_PROCESSING_FEE', [
+      loan.processingFeeType === 'PCT'
+        ? t('UI_FEE_VALUE_PCT', { fee: money(loan.processingFeeAmt), pct: rate(Number(loan.processingFeeValue)) })
+        : money(loan.processingFeeAmt),
+      loan.processingFeeDeducted
+        ? t('UI_FEE_WORKING', { fee: money(loan.processingFeeAmt), net: money(sumMoney([loan.principal]) - sumMoney([loan.processingFeeAmt])), principal: money(loan.principal) })
+        : t('UI_FEE_PAID_SEPARATELY'),
+    ].join(' · ')] as [string, string]] : []),
+    ['UI_TOTAL_TO_PAY', t('UI_TOTAL_TO_PAY_VALUE', { total: money(sumMoney([loan.principal, loan.interest])), principal: money(loan.principal), interest: money(loan.interest) })],
+    ['UI_INSTALLMENTS', sameAmount
+      ? t('UI_INSTALLMENTS_OF', { count: amounts.length, term: loan.term, amount: money(amounts[0]) })
+      : t('UI_INSTALLMENTS_COUNT', { count: amounts.length, term: loan.term })],
+  ]
   const methodName = (methodId: number) => methods.find(item => item.id === methodId)?.label ?? t('UI_METHOD', { methodId })
   const paymentNo = (paymentId: number) => payments.find(item => item.id === paymentId)?.paymentNo
 
@@ -181,6 +201,21 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
           hint={unpaidFees.length > 0 ? t('UI_PLUS_IN_LATE_FEES', { value: money(sumMoney(unpaidFees.map(item => item.fee))) }) : undefined}
         />
       </div>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-xl font-semibold tracking-tight text-ink">{t('UI_LOAN_TERMS')}</h2>
+        <div className="rounded-2xl border border-line bg-surface p-6">
+          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-[max-content_1fr]">
+            {terms.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-base text-muted">{t(label)}</dt>
+                <dd className="text-base font-medium text-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {loan.settlementName === 'FIXED' && <p className="mt-5 text-sm text-muted">{t('UI_EFFECTIVE_RATE_NOTE')}</p>}
+        </div>
+      </section>
 
       <Section title={t('UI_INSTALLMENTS')}>
         {installments.length === 0 ? <Empty text={t('UI_NO_INSTALLMENTS')} /> : (

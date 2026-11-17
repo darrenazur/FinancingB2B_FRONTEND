@@ -55,6 +55,9 @@ export async function saveLoan(
     SettlementStructID: text(formData, 'SettlementStructID'),
     ReleaseDate: text(formData, 'ReleaseDate'),
     BackdateReason: text(formData, 'BackdateReason'),
+    ProcessingFeeType: text(formData, 'ProcessingFeeType'),
+    ProcessingFeeValue: text(formData, 'ProcessingFeeValue'),
+    ProcessingFeeDeducted: text(formData, 'ProcessingFeeDeducted'),
     ...noteFields(formData),
   }
 

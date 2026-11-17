@@ -70,6 +70,9 @@ async function optionsFor(source: BizSource): Promise<BizOption[]> {
     case 'category':
       return (await view('expense-category')).filter(row => !row.Deleted)
         .map(row => ({ value: cell(row.ExpenseCategoryID), label: cell(row.Name), code: cell(row.CategoryCd) }))
+    case 'incomeCategory':
+      return (await view('income-category')).filter(row => !row.Deleted)
+        .map(row => ({ value: cell(row.IncomeCategoryID), label: cell(row.Name), code: cell(row.CategoryCd) }))
     case 'agent':
       return (await view('agent'))
         .map(row => ({ value: cell(row.AdminUserID), label: cell(row.Name) || cell(row.Username), code: cell(row.RoleName) }))
@@ -103,10 +106,71 @@ async function optionsFor(source: BizSource): Promise<BizOption[]> {
             { text: formatMoney(cell(row.Available)), sort: Number(cell(row.Available)) },
             { text: cell(row.Grade) },
             { text: formatMoney(cell(row.SuggestedMax)), sort: Number(cell(row.SuggestedMax)) },
+            { text: cell(row.LastDueDate) ? formatDate(cell(row.LastDueDate)) : '', sort: Date.parse(cell(row.LastDueDate)) || 0 },
           ],
           warn: Boolean(row.Grade) && !['A', 'B'].includes(cell(row.Grade)),
         }))
   }
+}
+
+export interface CbfBackingLoan {
+  id: string
+  loanNo: string
+  client: string
+  amount: string
+  principalLeft: string
+  grade: string
+  lastDue: string
+  isOverdue: boolean
+}
+
+export interface CbfContract {
+  contract: Record<string, string>
+  loans: CbfBackingLoan[]
+}
+
+// One contract and the loans backing it now, with each loan's grade and last due date
+export async function getCbfContract(id: string): Promise<CbfContract | null> {
+  const [contracts, loans, options] = await Promise.all([view('cbf'), view('cbf-loan'), view('cbf-loan-option')])
+  const row = contracts.find(item => cell(item.BizCbfID) === id && !item.Deleted)
+  if (!row) return null
+  const byLoan = new Map(options.map(option => [cell(option.FinancingInformationID), option]))
+  return {
+    contract: Object.fromEntries(['InvestorName', 'ContractNo', 'StartDate', 'MaturityDate', 'Amount', 'MonthlyRate',
+      'Status', 'Backed', 'Unbacked', 'DueAtMaturity'].map(name => [name, cell(row[name])])),
+    loans: loans.filter(item => cell(item.BizCbfID) === id && !item.Deleted).map((item): CbfBackingLoan => {
+      const option = byLoan.get(cell(item.FinancingInformationID))
+      return {
+        id: cell(item.BizCbfLoanID),
+        loanNo: cell(item.LoanNo),
+        client: cell(item.ClientName),
+        amount: cell(item.Amount),
+        principalLeft: cell(item.LoanBalance),
+        grade: cell(option?.Grade),
+        lastDue: cell(option?.LastDueDate),
+        isOverdue: Boolean(item.IsOverdue),
+      }
+    }),
+  }
+}
+
+// One live notice for the bell (see NOTIFICATION_VW): Items, Amount, Compare and RefDate mean different things per code
+export interface Notice {
+  code: string
+  items: number
+  amount: string
+  compare: string
+  refDate: string
+}
+
+export async function getNotifications(): Promise<Notice[]> {
+  return (await view('notification')).map(row => ({
+    code: cell(row.Code),
+    items: Number(row.Items) || 0,
+    amount: cell(row.Amount),
+    compare: cell(row.Compare),
+    refDate: cell(row.RefDate),
+  }))
 }
 
 export async function getBizOptions(sources: BizSource[]): Promise<Partial<Record<BizSource, BizOption[]>>> {

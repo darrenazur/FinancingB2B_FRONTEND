@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { saveLoan } from '../../app/loans/actions'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
-import { daysBetween, formatDate, formatMoney, manilaToday } from '../../lib/format'
+import { daysBetween, formatDate, formatMoney, manilaToday, sumMoney } from '../../lib/format'
 import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
@@ -36,6 +36,9 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
     TenureDurationID: loan ? String(loan.tenureId) : '',
     SettlementStructID: loan ? String(loan.settlementId) : '',
     BackdateReason: '',
+    ProcessingFeeType: loan ? loan.processingFeeType ?? '' : lookups.feeSetting?.type ?? '',
+    ProcessingFeeValue: loan ? (loan.processingFeeType ? loan.processingFeeValue.replace(/(\.\d{2})\d*$/, '$1') : '') : lookups.feeSetting?.value ?? '',
+    ProcessingFeeDeducted: loan && loan.processingFeeType ? (loan.processingFeeDeducted ? '1' : '0') : '1',
   })
 
   // The chosen partner's credit score, as advice only: any amount can still be saved
@@ -46,6 +49,14 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
         max: formatMoney(score.suggestedMax),
       })
     : undefined
+
+  // Fixed in Business Settings: a new loan takes it, an edited loan keeps what it was saved with
+  const feeLocked = Boolean(lookups.feeSetting)
+  const fee = feeOf(values.PrincipalAmt, values.ProcessingFeeType, values.ProcessingFeeValue)
+  const feeHint = fee === null || fee <= BigInt(0) ? undefined
+    : values.ProcessingFeeDeducted === '1'
+      ? t('UI_FEE_WORKING', { fee: formatMoney(fee), net: formatMoney(sumMoney([values.PrincipalAmt]) - fee), principal: formatMoney(values.PrincipalAmt) })
+      : t('UI_FEE_WORKING_SEPARATE', { fee: formatMoney(fee), principal: formatMoney(values.PrincipalAmt) })
 
   return (
     <FormDialog
@@ -126,6 +137,35 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
           </Field>
         )}
       </div>
+      <div className={SECTION_GRID}>
+        <Field label={t('UI_PROCESSING_FEE')} hint={feeLocked ? t(loan ? 'UI_FEE_KEPT_ON_EDIT' : 'UI_FEE_FROM_SETTINGS') : undefined}>
+          <select {...field('ProcessingFeeType')} disabled={feeLocked} className={INPUT}>
+            <option value="">{t('UI_FEE_NONE')}</option>
+            <option value="AMT">{t('UI_FEE_AMOUNT')}</option>
+            <option value="PCT">{t('UI_FEE_PERCENT')}</option>
+          </select>
+        </Field>
+        {values.ProcessingFeeType && (
+          <Field label={t('UI_FEE_VALUE')} hint={feeHint}>
+            <input
+              {...field('ProcessingFeeValue', decimalOnly(2))}
+              disabled={feeLocked}
+              required
+              inputMode="decimal"
+              pattern="\d{1,13}(\.\d{1,2})?"
+              className={INPUT}
+            />
+          </Field>
+        )}
+        {fee !== null && fee > BigInt(0) && (
+          <Field label={t('UI_FEE_COLLECTED')}>
+            <select {...field('ProcessingFeeDeducted')} className={INPUT}>
+              <option value="1">{t('UI_FEE_DEDUCTED')}</option>
+              <option value="0">{t('UI_FEE_PAID_SEPARATELY')}</option>
+            </select>
+          </Field>
+        )}
+      </div>
       {releaseDate !== savedDate && (
         <label className="flex items-start gap-3 text-base text-body">
           <input
@@ -141,4 +181,12 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
       <PromissoryNoteFields loan={loan} purposes={lookups.purposes} />
     </FormDialog>
   )
+}
+
+// The fee in pesos, the same as the SP: a % is principal x % / 100, rounded to centavos. null = can't work it out yet
+function feeOf(principal: string, type: string, value: string): bigint | null {
+  const amount = /^\d{1,13}(\.\d{1,2})?$/
+  if (!type || !amount.test(principal) || !amount.test(value)) return null
+  const scaled = type === 'PCT' ? (sumMoney([principal]) * sumMoney([value])) / BigInt(10000000) : sumMoney([value])
+  return ((scaled + BigInt(500)) / BigInt(1000)) * BigInt(1000)
 }
