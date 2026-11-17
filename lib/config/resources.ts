@@ -216,6 +216,24 @@ CONFIG_RESOURCES.push(
     idField: 'PartnerKpiID',
     fields: [{ name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 }],
   },
+  {
+    key: 'expense-category',
+    label: 'UI_EXPENSE_CATEGORIES',
+    description: 'UI_EXPENSE_CATEGORIES_DESCRIPTION',
+    group: 'UI_CONFIGURATION_TABLES',
+    path: 'expense-category',
+    idField: 'ExpenseCategoryID',
+    fields: [{ name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 }],
+  },
+  {
+    key: 'income-category',
+    label: 'UI_OTHER_INCOME_CATEGORIES',
+    description: 'UI_OTHER_INCOME_CATEGORIES_DESCRIPTION',
+    group: 'UI_CONFIGURATION_TABLES',
+    path: 'income-category',
+    idField: 'IncomeCategoryID',
+    fields: [{ name: 'Name', label: 'UI_NAME', type: 'text', maxLength: 100 }],
+  },
 )
 
 export function findResource(key: string): ConfigResource | undefined {

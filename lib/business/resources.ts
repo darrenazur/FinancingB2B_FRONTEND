@@ -2,7 +2,7 @@
 // Field names match the API and its procedures; the API checks every value again.
 
 export type BizFieldType = 'money' | 'rate' | 'date' | 'futureDate' | 'month' | 'int' | 'text' | 'longtext' | 'select' | 'inout' | 'capitalType' | 'checkbox'
-export type BizSource = 'fund' | 'bankLoan' | 'category' | 'agent' | 'investor' | 'cbf' | 'cbfLoan'
+export type BizSource = 'fund' | 'bankLoan' | 'category' | 'incomeCategory' | 'agent' | 'investor' | 'cbf' | 'cbfLoan'
 export type BizColumnKind = 'text' | 'number' | 'money' | 'date' | 'month' | 'percent' | 'inout' | 'capitalType' | 'opening' | 'paidOff' | 'cbfStatus' | 'risk'
 
 export interface BizField {
@@ -42,6 +42,8 @@ export interface BizResource {
   editLabel?: string
   // Deleting a row only ends it (it stays as history): the buttons and status say Remove and Removed
   removeWording?: boolean
+  // Rows open a page of their own at this path + the row id (an Open button on each row)
+  detailPath?: string
 }
 
 const remarks: BizField = { name: 'Remarks', label: 'UI_REMARKS', type: 'longtext' }
@@ -184,6 +186,28 @@ export const BIZ_RESOURCES: BizResource[] = [
     ],
   },
   {
+    key: 'other-income',
+    label: 'UI_OTHER_INCOME',
+    description: 'UI_OTHER_INCOME_DESCRIPTION',
+    idField: 'BizOtherIncomeID',
+    titleField: 'CategoryName',
+    canAdd: true,
+    canDelete: true,
+    sources: ['incomeCategory'],
+    fields: [
+      { name: 'IncomeCategoryID', label: 'UI_CATEGORY', type: 'select', source: 'incomeCategory', required: true },
+      { name: 'IncomeDate', label: 'UI_DATE', type: 'date', required: true },
+      { name: 'Amount', label: 'UI_AMOUNT', type: 'money', required: true },
+      remarks,
+    ],
+    columns: [
+      { name: 'CategoryName', label: 'UI_CATEGORY', kind: 'text' },
+      { name: 'IncomeDate', label: 'UI_DATE', kind: 'date' },
+      { name: 'Amount', label: 'UI_AMOUNT', kind: 'money' },
+      { name: 'Remarks', label: 'UI_REMARKS', kind: 'text' },
+    ],
+  },
+  {
     key: 'agent-pay',
     label: 'UI_AGENT_PAY',
     description: 'UI_AGENT_PAY_DESCRIPTION_2',
@@ -241,10 +265,11 @@ export const BIZ_RESOURCES: BizResource[] = [
     titleField: 'InvestorName',
     canAdd: true,
     canDelete: true,
+    detailPath: '/business/cbf-contract/',
     sources: ['investor'],
+    // The contract number comes from the CBF number range when the contract is added
     fields: [
       { name: 'BizInvestorID', label: 'UI_INVESTOR', type: 'select', source: 'investor', required: true },
-      { name: 'ContractNo', label: 'UI_CONTRACT_NUMBER', type: 'text' },
       { name: 'StartDate', label: 'UI_START_DATE', type: 'date', required: true },
       { name: 'Amount', label: 'UI_AMOUNT_INVESTED', type: 'money', required: true },
       { name: 'MonthlyRate', label: 'UI_MONTHLY_RATE', type: 'rate', hint: 'UI_CBF_RATE_HINT' },
@@ -282,7 +307,7 @@ export const BIZ_RESOURCES: BizResource[] = [
     fields: [
       { name: 'BizCbfID', label: 'UI_CBF_CONTRACT', type: 'select', source: 'cbf', required: true, fixedOnEdit: true },
       { name: 'FinancingInformationID', label: 'UI_LOAN_NUMBER', type: 'select', source: 'cbfLoan', required: true, fixedOnEdit: true,
-        picker: ['UI_LOAN_NUMBER', 'UI_CLIENT', 'UI_AVAILABLE', 'UI_GRADE', 'UI_SUGGESTED_MAX'] },
+        picker: ['UI_LOAN_NUMBER', 'UI_CLIENT', 'UI_AVAILABLE', 'UI_GRADE', 'UI_SUGGESTED_MAX', 'UI_LAST_DUE'] },
       { name: 'Amount', label: 'UI_AMOUNT', type: 'money', required: true, hint: 'UI_CBF_LOAN_AMOUNT_HINT' },
       { name: 'AddedDate', label: 'UI_DATE_ADDED', type: 'date', required: true, fixedOnEdit: true },
       remarks,

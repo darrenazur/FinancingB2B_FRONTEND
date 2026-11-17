@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { deleteBizRecord } from '../../app/business/actions'
 import type { BizOption, BizRow } from '../../lib/api/business'
@@ -89,16 +90,21 @@ export default function BizTable({ resource, rows, options, canEdit }: BizTableP
             <RefreshButton />
           </>
         }
-        rowActions={row => canEdit && !row.deleted && (
+        rowActions={row => !row.deleted && (canEdit || resource.detailPath) && (
           <div className="flex justify-end gap-2.5">
-            <button
-              onClick={() => setEditing(row)}
-              className={ROW_BUTTON_NEUTRAL}
-              aria-label={resource.editLabel ? `${t(resource.editLabel)} · ${rowTitle(row)}` : t('UI_EDIT_2', { row: rowTitle(row) })}
-            >
-              {t(resource.editLabel ?? 'UI_EDIT')}
-            </button>
-            {resource.canDelete && (
+            {resource.detailPath && (
+              <Link href={`${resource.detailPath}${row.id}`} className={ROW_BUTTON_NEUTRAL}>{t('UI_OPEN')}</Link>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => setEditing(row)}
+                className={ROW_BUTTON_NEUTRAL}
+                aria-label={resource.editLabel ? `${t(resource.editLabel)} · ${rowTitle(row)}` : t('UI_EDIT_2', { row: rowTitle(row) })}
+              >
+                {t(resource.editLabel ?? 'UI_EDIT')}
+              </button>
+            )}
+            {canEdit && resource.canDelete && (
               <ConfirmAction
                 label={t(resource.removeWording ? 'UI_REMOVE' : 'UI_DELETE')}
                 title={t(resource.removeWording ? 'UI_REMOVE_2' : 'UI_DELETE_2', { row: rowTitle(row) })}

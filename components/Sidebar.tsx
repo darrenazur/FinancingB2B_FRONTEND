@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { logout } from '../app/login/actions'
 import type { CurrentUser } from '../lib/api/session'
 import { can } from '../lib/permissions'
+import NotificationBell, { type NoticeState } from './NotificationBell'
 import ThemeSwitch, { type Theme } from './ThemeSwitch'
 import { t } from '../lib/captions/t'
 
@@ -22,9 +23,11 @@ interface SidebarProps {
   theme: Theme
   open: boolean
   onClose: () => void
+  // The bell, for users with business.view; shown here on large screens (the phone bell is in the top bar)
+  notices?: NoticeState
 }
 
-export default function Sidebar({ user, theme, open, onClose }: SidebarProps) {
+export default function Sidebar({ user, theme, open, onClose, notices }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -38,9 +41,14 @@ export default function Sidebar({ user, theme, open, onClose }: SidebarProps) {
           open ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
-        <div className="flex items-center gap-3 px-7 pb-8 pt-9">
+        <div className="relative flex items-center gap-3 px-7 pb-8 pt-9">
           <div className="flex h-10 w-20 items-center justify-center rounded-xl bg-accent text-lg font-bold text-white">AZUR</div>
           <span className="text-xl font-semibold tracking-tight text-ink">{t('UI_BANKINGMS')}</span>
+          {notices && (
+            <div className="absolute right-2 top-2 hidden lg:block">
+              <NotificationBell state={notices} panelClass="lg:left-0 lg:top-12" />
+            </div>
+          )}
         </div>
 
         <nav className="flex flex-1 flex-col gap-1.5 px-4 pb-4">

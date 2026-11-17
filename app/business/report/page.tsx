@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import RefreshButton from '../../../components/actions/RefreshButton'
+import GrowthReport from '../../../components/business/GrowthReport'
 import ReportTable, { ReportColumn } from '../../../components/business/ReportTable'
 import PageHeader from '../../../components/PageHeader'
 import { getAgentMonthly, getConcentration, getMonthlyReport, getStatements } from '../../../lib/api/business'
@@ -18,6 +19,8 @@ const MONTHLY: ReportColumn[] = [
   { name: 'CollectionRatePct', label: 'UI_COLLECTION_RATE', kind: 'percent' },
   { name: 'IncomePct', label: 'UI_INCOME_PCT', kind: 'percent' },
   { name: 'PenaltyIncome', label: 'UI_LATE_FEES', kind: 'money' },
+  { name: 'OtherIncome', label: 'UI_OTHER_INCOME', kind: 'money' },
+  { name: 'ProcessingFees', label: 'UI_PROCESSING_FEES', kind: 'money' },
   { name: 'OwnerSalary', label: 'UI_OWNER_SALARY', kind: 'money' },
   { name: 'AgentSalary', label: 'UI_AGENT_SALARY', kind: 'money' },
   { name: 'Overhead', label: 'UI_OVERHEAD', kind: 'money' },
@@ -100,6 +103,7 @@ export default async function BusinessReportPage() {
       <PageHeader title={t('UI_MONTHLY_REPORT')} description={t('UI_MONTHLY_REPORT_DESCRIPTION')} />
 
       <div className="mb-5 flex justify-end"><RefreshButton /></div>
+      <GrowthReport rows={months} />
       <ReportTable columns={MONTHLY} rows={months} keyOf={row => row.MonthStart ?? ''} />
       <p className="mt-3 text-sm text-muted">{t('UI_MONTHLY_REPORT_NOTE_3')}</p>
 

@@ -17,6 +17,8 @@ interface BizFormProps {
   title: string
   options: Partial<Record<BizSource, BizOption[]>>
   onClose: () => void
+  // Values chosen by the page (like the contract on its own page): sent hidden, not shown
+  fixed?: Record<string, string>
 }
 
 const CLEAN: Partial<Record<BizField['type'], (value: string) => string>> = {
@@ -37,15 +39,16 @@ function startValue(field: BizField, row: BizRow | null, today: string): string 
   return ''
 }
 
-export default function BizForm({ resource, row, title, options, onClose }: BizFormProps) {
+export default function BizForm({ resource, row, title, options, onClose, fixed }: BizFormProps) {
   const today = manilaToday()
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(resource.fields.map(field => [field.name, startValue(field, row, today)])))
+    Object.fromEntries(resource.fields.map(field => [field.name, fixed?.[field.name] ?? startValue(field, row, today)])))
   const set = (name: string, value: string) => setValues(current => ({ ...current, [name]: value }))
 
   // Salary fields show only for the categories that need them.
   const categoryCode = options.category?.find(option => option.value === values.ExpenseCategoryID)?.code ?? ''
-  const shown = resource.fields.filter(field => !field.onlyForCategory || field.onlyForCategory.includes(categoryCode))
+  const shown = resource.fields.filter(field =>
+    !fixed?.[field.name] && (!field.onlyForCategory || field.onlyForCategory.includes(categoryCode)))
 
   const input = (field: BizField) => {
     const value = values[field.name] ?? ''
@@ -130,6 +133,7 @@ export default function BizForm({ resource, row, title, options, onClose }: BizF
 
   return (
     <FormDialog title={`${title} · ${t(resource.label)}`} action={saveBizRecord.bind(null, resource.key, row?.id ?? null)} onClose={onClose}>
+      {fixed && Object.entries(fixed).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
       {shown.map(field => (
         <Field key={field.name} label={t(field.label)} hint={field.hint ? t(field.hint) : undefined}>
           {input(field)}

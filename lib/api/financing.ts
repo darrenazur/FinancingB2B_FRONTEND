@@ -78,6 +78,8 @@ export interface Loan extends Audit {
   interest: string
   currency: string
   monthlyRate: number
+  // Saved with the loan: the monthly rate on the balance still owed that gives the same payments. null on old loans
+  effectiveRate: number | null
   term: string
   termTypeId: number
   durationMonths: number
@@ -101,6 +103,11 @@ export interface Loan extends Audit {
   overdueSince: string | null
   loanPurposeId: number | null
   loanPurposeName: string
+  // Processing fee saved with the loan: AMT (pesos) or PCT (% of the principal); null = no fee
+  processingFeeType: 'AMT' | 'PCT' | null
+  processingFeeValue: string
+  processingFeeAmt: string
+  processingFeeDeducted: boolean
 }
 
 export interface Installment {
@@ -168,6 +175,13 @@ export interface LoanLookups {
   purposes: ListOption[]
   // Partner id -> grade, score and suggested max, for the hint beside the partner
   scores: Record<number, ScoreSummary>
+  feeSetting: FeeSetting | null
+}
+
+// The fee fixed in Business Settings for every new loan; null = typed on each loan
+export interface FeeSetting {
+  type: 'AMT' | 'PCT'
+  value: string
 }
 
 // Credit score, worked out live by PARTNERSCORE_VW. Grade NEW = nothing due yet.
@@ -266,6 +280,7 @@ interface LoanRow extends AuditRow {
   TotalInterestAmt: string
   CurrencyCd: string
   InterestRate: number
+  EffectiveInterestRate?: string | number | null
   TermName: string
   TermTypeID: number
   Duration: number
@@ -285,6 +300,10 @@ interface LoanRow extends AuditRow {
   OverdueSince: string | null
   LoanPurposeID?: number | null
   LoanPurposeName?: string | null
+  ProcessingFeeType?: string | null
+  ProcessingFeeValue?: string | null
+  ProcessingFeeAmt?: string | null
+  ProcessingFeeDeducted?: boolean | null
 }
 
 interface InstallmentRow {
@@ -345,6 +364,7 @@ function toLoan(row: LoanRow): Loan {
     interest: row.TotalInterestAmt,
     currency: row.CurrencyCd.trim(),
     monthlyRate: row.InterestRate,
+    effectiveRate: row.EffectiveInterestRate === null || row.EffectiveInterestRate === undefined ? null : Number(row.EffectiveInterestRate),
     term: row.TermName,
     termTypeId: row.TermTypeID,
     durationMonths: row.Duration,
@@ -362,6 +382,10 @@ function toLoan(row: LoanRow): Loan {
     promissoryNoteFile: isFileKey(row.PromissoryNotePath) ? row.PromissoryNotePath ?? '' : '',
     loanPurposeId: row.LoanPurposeID ?? null,
     loanPurposeName: row.LoanPurposeName ?? '',
+    processingFeeType: row.ProcessingFeeType === 'AMT' || row.ProcessingFeeType === 'PCT' ? row.ProcessingFeeType : null,
+    processingFeeValue: row.ProcessingFeeValue ?? '0',
+    processingFeeAmt: row.ProcessingFeeAmt ?? '0',
+    processingFeeDeducted: Boolean(row.ProcessingFeeDeducted),
     paid: row.TotalPaidAmt ?? '0',
     overdueSince: row.OverdueSince ? row.OverdueSince.slice(0, 10) : null,
     ...readAudit(row),
@@ -527,13 +551,14 @@ export async function getPaymentMethods(): Promise<Option[]> {
 }
 
 export async function getLoanLookups(): Promise<LoanLookups> {
-  const [currencies, terms, tenures, settlements, purposes, scores] = await Promise.all([
+  const [currencies, terms, tenures, settlements, purposes, scores, feeSetting] = await Promise.all([
     getList<LookupRow>('/currency-view'),
     getList<LookupRow>('/term-type-view'),
     getList<LookupRow>('/tenure-duration-view'),
     getList<LookupRow>('/settlement-structure-view'),
     getLoanPurposes(),
     getPartnerScores(),
+    getLoanFeeSetting(),
   ])
 
   return {
@@ -543,7 +568,17 @@ export async function getLoanLookups(): Promise<LoanLookups> {
     settlements: live(settlements).map(row => ({ id: Number(row.SettlementStructID), label: String(row.Name) })),
     purposes,
     scores,
+    feeSetting,
   }
+}
+
+// A setting that can't be read gives free input on the form; the API still applies the setting when saving
+export async function getLoanFeeSetting(): Promise<FeeSetting | null> {
+  const [row] = await getList<LookupRow>('/loan-fee-setting-view').catch(() => [])
+  if (!row) return null
+  if (Number(row.FeePct) > 0) return { type: 'PCT', value: String(row.FeePct) }
+  if (Number(row.FeeAmt) > 0) return { type: 'AMT', value: String(row.FeeAmt) }
+  return null
 }
 
 // Scores of every partner the user can see. A score that can't be read leaves the grade blank, never the page down.

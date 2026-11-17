@@ -55,6 +55,8 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     { label: t('UI_LATE_FEES'), value: row.LateFeeIncome },
     ...optional('UI_RECOVERIES', row.Recoveries),
     ...optional('UI_INVESTOR_LOSS_SHARE', row.InvestorLossShare),
+    ...optional('UI_OTHER_INCOME', row.OtherIncome),
+    ...optional('UI_PROCESSING_FEES', row.ProcessingFees),
     { label: t('UI_TOTAL_REVENUE'), value: row.TotalRevenue, kind: 'total' },
     { label: t('UI_EXPENSES'), kind: 'heading' },
     ...monthBanks.flatMap(b => [
@@ -121,6 +123,8 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     { label: t('UI_LATE_FEES_COLLECTED'), value: row.CashLateFeesCollected },
     ...optional('UI_TAKEN_FROM_FUNDS', row.CashFundsTakenOut),
     ...optional('UI_INVESTOR_MONEY_IN', row.CashInvestorIn),
+    ...optional('UI_OTHER_INCOME_RECEIVED', row.CashOtherIncome),
+    ...optional('UI_PROCESSING_FEES_RECEIVED', row.CashProcessingFees),
     { label: t('UI_TOTAL_INFLOWS'), value: row.CashInflows, kind: 'total' },
     { label: t('UI_OUTFLOWS'), kind: 'heading' },
     { label: t('UI_LOANS_RELEASED'), value: row.CashLoansReleased },

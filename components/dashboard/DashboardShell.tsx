@@ -3,6 +3,8 @@
 import { usePathname } from 'next/navigation'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CurrentUser } from '../../lib/api/session'
+import { can } from '../../lib/permissions'
+import { useNotices } from '../NotificationBell'
 import Sidebar from '../Sidebar'
 import type { Theme } from '../ThemeSwitch'
 import Topbar from '../Topbar'
@@ -39,6 +41,10 @@ export default function DashboardShell({ user, theme, children }: DashboardShell
   const mainRef = useRef<HTMLElement>(null)
   const backForward = useRef(false)
   const restoring = useRef(false)
+  // One load per page change, shared by the sidebar bell and the phone bell
+  const canSeeNotices = can(user?.permissions ?? [], 'business.view') && pathname !== '/login'
+  const noticeState = useNotices(canSeeNotices)
+  const notices = canSeeNotices ? noticeState : undefined
 
   // Back and Forward return to where the person was; any other link opens the page at the top.
   useEffect(() => {
@@ -78,9 +84,9 @@ export default function DashboardShell({ user, theme, children }: DashboardShell
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar user={user} theme={theme} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar user={user} theme={theme} open={sidebarOpen} onClose={() => setSidebarOpen(false)} notices={notices} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} notices={notices} />
         <main ref={mainRef} onScroll={saveScroll} className="flex-1 overflow-y-auto bg-page px-4 py-8 md:px-10 md:py-12">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
