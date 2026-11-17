@@ -8,7 +8,8 @@ import { can } from '../../../lib/permissions'
 import { t } from '../../../lib/captions/t'
 
 export default async function UsersPage() {
-  const permissions = (await getCurrentUser())?.permissions ?? []
+  const me = await getCurrentUser()
+  const permissions = me?.permissions ?? []
   if (!can(permissions, 'user.manage')) redirect('/dashboard')
 
   const [users, roles] = await Promise.all([getUsers(), getRoles()])
@@ -19,7 +20,7 @@ export default async function UsersPage() {
         {t('UI_CONFIGURATION')}
       </Link>
       <PageHeader title={t('UI_USERS')} description={t('UI_SECURITY_PEOPLE_WHO_CAN_SIGN_IN_AND_THE_ROLE_OF_EACH')} />
-      <UsersTable users={users} roles={roles} />
+      <UsersTable users={users} roles={roles} currentUsername={me?.username ?? ''} />
     </>
   )
 }

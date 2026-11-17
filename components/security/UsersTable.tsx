@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { resetUserPassword, saveUser } from '../../app/config/security/actions'
 import type { AppRole, AppUser } from '../../lib/api/security'
@@ -54,9 +55,11 @@ const COLUMNS: Column<AppUser>[] = [
 interface UsersTableProps {
   users: AppUser[]
   roles: AppRole[]
+  // Your own row opens the change step instead of a reset
+  currentUsername: string
 }
 
-export default function UsersTable({ users, roles }: UsersTableProps) {
+export default function UsersTable({ users, roles, currentUsername }: UsersTableProps) {
   const [form, setForm] = useState<AppUser | 'new' | null>(null)
   const [resetting, setResetting] = useState<AppUser | null>(null)
 
@@ -86,9 +89,14 @@ export default function UsersTable({ users, roles }: UsersTableProps) {
             <button onClick={() => setForm(user)} className={ROW_BUTTON_NEUTRAL} aria-label={t('UI_EDIT_5', { username: user.username })}>
               {t('UI_EDIT')}
             </button>
-            <button onClick={() => setResetting(user)} className={ROW_BUTTON_NEUTRAL} aria-label={t('UI_RESET_PASSWORD_OF', { username: user.username })}>
-              {t('UI_RESET_PASSWORD')}
-            </button>
+            {user.username === currentUsername ? (
+              // Your own: the change step keeps you signed in and asks for your current password
+              <Link href="/account/password" className={ROW_BUTTON_NEUTRAL}>{t('UI_CHANGE_PASSWORD')}</Link>
+            ) : (
+              <button onClick={() => setResetting(user)} className={ROW_BUTTON_NEUTRAL} aria-label={t('UI_RESET_PASSWORD_OF', { username: user.username })}>
+                {t('UI_RESET_PASSWORD')}
+              </button>
+            )}
           </div>
         )}
       />

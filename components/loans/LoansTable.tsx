@@ -126,6 +126,12 @@ interface LoansTableProps {
 
 export default function LoansTable({ loans, verifiedPartners, lookups, users, permissions }: LoansTableProps) {
   const [form, setForm] = useState<Loan | 'new' | null>(null)
+  // Open loans per partner, for the partner picker on Add loan
+  const openLoans = useMemo(() => {
+    const counts: Record<number, number> = {}
+    for (const loan of loans) if (!loan.closed) counts[loan.partnerId] = (counts[loan.partnerId] ?? 0) + 1
+    return counts
+  }, [loans])
 
   // Only users who can assign see whose care each loan is in (the partner's agent).
   const canAssign = can(permissions, 'partner.assign')
@@ -200,6 +206,7 @@ export default function LoansTable({ loans, verifiedPartners, lookups, users, pe
           key={form === 'new' ? 'new' : form.id}
           loan={form === 'new' ? null : form}
           partners={verifiedPartners}
+          openLoans={openLoans}
           lookups={lookups}
           canBackdate={can(permissions, 'loan.backdate')}
           onClose={() => setForm(null)}

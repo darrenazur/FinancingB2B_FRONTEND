@@ -100,6 +100,19 @@ export async function processOverdue(): Promise<SaveState> {
   }
 }
 
+// One loan only: the same rule as Process overdue on the Loans list
+export async function processLoanOverdue(id: number): Promise<SaveState> {
+  const result = await write('POST', '/overdue-process-loan', { FinancingInformationID: id })
+
+  if (!result.saved) return result.state
+  refresh()
+  return {
+    ok: true,
+    error: null,
+    notice: t('UI_INSTALLMENTS_MARKED_OVERDUE_LATE_FEES_CHARGED', { MarkedOverdue: result.data.MarkedOverdue ?? 0, FeesCharged: result.data.FeesCharged ?? 0 }),
+  }
+}
+
 export async function addPayment(
   loanId: number,
   requestKey: string,

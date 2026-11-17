@@ -42,7 +42,8 @@ export default function DashboardShell({ user, theme, children }: DashboardShell
   const backForward = useRef(false)
   const restoring = useRef(false)
   // One load per page change, shared by the sidebar bell and the phone bell
-  const canSeeNotices = can(user?.permissions ?? [], 'business.view') && pathname !== '/login'
+  // A temporary password opens only the change step, so the bell waits until it is changed
+  const canSeeNotices = can(user?.permissions ?? [], 'business.view') && pathname !== '/login' && !user?.mustChangePassword
   const noticeState = useNotices(canSeeNotices)
   const notices = canSeeNotices ? noticeState : undefined
 

@@ -590,6 +590,8 @@ export const DEFAULT_CAPTIONS: Record<string, string> = {
   UI_PROCESSING_FEES_RECEIVED: "Processing fees received",
   UI_PROCESS_OVERDUE: "Process overdue",
   UI_PROCESS_OVERDUE_INSTALLMENTS: "Process overdue installments?",
+  UI_PROCESS_OVERDUE_LOAN: "Process overdue for loan {loanNo}?",
+  UI_PROCESS_OVERDUE_LOAN_MESSAGE: "{count} installment(s) of this loan are past due with something unpaid. They become OVERDUE, and each one without a late fee gets one: the late payment fee, or what is still unpaid if that is less. No other loan is touched.",
   UI_PROJ_AGENT_FIXED: "Agent fixed pay a month",
   UI_PROJ_ASSUMPTIONS: "What the projection assumes",
   UI_PROJ_BANK_LOANS: "Open bank loans",
