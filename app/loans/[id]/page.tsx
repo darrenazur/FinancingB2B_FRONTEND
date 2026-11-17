@@ -15,7 +15,7 @@ import { getInstallments, getLoan, getLoanPurposes, getPaymentMethods, getPaymen
 import { getCurrentUser } from '../../../lib/api/session'
 import { formatDate, formatMoney, manilaToday, sumMoney, toAmount } from '../../../lib/format'
 import { can } from '../../../lib/permissions'
-import { closeLoan, reversePayment, undoWriteOff, waivePenalty, writeOffLoan } from '../actions'
+import { closeLoan, processLoanOverdue, reversePayment, undoWriteOff, waivePenalty, writeOffLoan } from '../actions'
 import { t } from '../../../lib/captions/t'
 
 const TONE: Record<string, 'good' | 'neutral' | 'bad'> = {
@@ -90,6 +90,9 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   // A write-off date runs from the release, or the last payment if later, up to today.
   const writtenOff = writeOffs.find(item => !item.undoneDate)
   const canWriteOff = isOpen && can(permissions, 'loan.writeoff')
+  // Installments past due with something unpaid: what Process overdue would mark on this loan
+  const lateInstallments = installments.filter(item => OPEN_INSTALLMENTS.includes(item.status)
+    && item.dueDate.slice(0, 10) < manilaToday() && remainingDue(item) > BigInt(0)).length
   const writeOffFrom = [loan.releaseDate, ...payments.map(item => item.date)].map(value => value.slice(0, 10)).sort().at(-1)
   // Loan terms: the saved rates, what the borrower pays in all, and the installments that make it up
   const rate = (value: number) => `${Number(value.toFixed(2))}%`
@@ -154,6 +157,16 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
             title={t('UI_CLOSE_LOAN', { loanNo: loan.loanNo })}
             message={t(CLOSE_LOAN_MESSAGE)}
             action={closeLoan.bind(null, loan.id)}
+            lock={{ type: 'LOAN', id: loan.id }}
+            triggerClass={SECONDARY_BUTTON}
+          />
+        )}
+        {isOpen && can(permissions, 'overdue.process') && lateInstallments > 0 && (
+          <ConfirmAction
+            label={t('UI_PROCESS_OVERDUE')}
+            title={t('UI_PROCESS_OVERDUE_LOAN', { loanNo: loan.loanNo })}
+            message={t('UI_PROCESS_OVERDUE_LOAN_MESSAGE', { count: lateInstallments })}
+            action={processLoanOverdue.bind(null, loan.id)}
             lock={{ type: 'LOAN', id: loan.id }}
             triggerClass={SECONDARY_BUTTON}
           />

@@ -37,7 +37,7 @@ export default function Sidebar({ user, theme, open, onClose, notices }: Sidebar
       <aside
         className={[
           'fixed left-0 top-0 z-30 flex h-full w-72 flex-col border-r border-line bg-surface transition-transform duration-200',
-          'lg:static lg:z-auto lg:translate-x-0',
+          'lg:relative lg:z-40 lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
