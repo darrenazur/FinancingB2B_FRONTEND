@@ -15,11 +15,13 @@ interface TablePickerProps {
   headers: string[]
   options: BizOption[]
   onChange: (value: string) => void
+  // Defaults to "Search loans" (the CBF backing-loan picker)
+  searchLabel?: string
 }
 
 // A select that opens a table: search, sort by any column, click a row to pick it.
 // Opens inside the form (not floating), so a dialog never cuts it off.
-export default function TablePicker({ name, value, required, headers, options, onChange }: TablePickerProps) {
+export default function TablePicker({ name, value, required, headers, options, onChange, searchLabel }: TablePickerProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<Sort>(null)
@@ -75,8 +77,8 @@ export default function TablePicker({ name, value, required, headers, options, o
             value={search}
             onChange={event => setSearch(event.target.value)}
             autoFocus
-            placeholder={t('UI_SEARCH_LOANS')}
-            aria-label={t('UI_SEARCH_LOANS')}
+            placeholder={searchLabel ?? t('UI_SEARCH_LOANS')}
+            aria-label={searchLabel ?? t('UI_SEARCH_LOANS')}
             className={INPUT}
           />
           <div className="max-h-80 overflow-auto rounded-lg border border-line">

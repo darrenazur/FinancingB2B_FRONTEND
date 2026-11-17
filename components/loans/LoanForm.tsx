@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { saveLoan } from '../../app/loans/actions'
+import type { BizOption } from '../../lib/api/business'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
 import { daysBetween, formatDate, formatMoney, manilaToday, sumMoney } from '../../lib/format'
 import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
+import TablePicker from '../forms/TablePicker'
 import PromissoryNoteFields from './PromissoryNoteFields'
 import { t } from '../../lib/captions/t'
 
@@ -15,18 +17,19 @@ const SECTION_GRID = 'grid gap-5 md:grid-cols-2'
 interface LoanFormProps {
   loan: Loan | null
   partners: Option[]
+  openLoans: Record<number, number>
   lookups: LoanLookups
   canBackdate: boolean
   onClose: () => void
 }
 
-export default function LoanForm({ loan, partners, lookups, canBackdate, onClose }: LoanFormProps) {
+export default function LoanForm({ loan, partners, openLoans, lookups, canBackdate, onClose }: LoanFormProps) {
   const [requestKey] = useState(newRequestKey)
   const today = manilaToday()
   const savedDate = loan?.releaseDate.slice(0, 10) ?? today
   const [releaseDate, setReleaseDate] = useState(savedDate)
   const [confirmed, setConfirmed] = useState(false)
-  const { values, field } = useFields({
+  const { values, setValues, field } = useFields({
     PartnerProfileID: loan ? String(loan.partnerId) : '',
     // The API stores five decimals and takes two.
     PrincipalAmt: loan ? loan.principal.replace(/(\.\d{2})\d*$/, '$1') : '',
@@ -49,6 +52,25 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
         max: formatMoney(score.suggestedMax),
       })
     : undefined
+
+  // The partner picker: sortable by grade, score, suggested max and open loans
+  const partnerOptions: BizOption[] = partners.map(partner => {
+    const s = lookups.scores[partner.id]
+    const scored = Boolean(s && s.grade !== 'NEW')
+    const open = openLoans[partner.id] ?? 0
+    return {
+      value: String(partner.id),
+      label: partner.label,
+      code: '',
+      cells: [
+        { text: partner.label },
+        { text: s ? (scored ? s.grade : t('UI_GRADE_NEW')) : '—' },
+        { text: scored ? String(Number(s.finalScore.toFixed(2))) : '—', sort: scored ? s.finalScore : -1 },
+        { text: s ? formatMoney(s.suggestedMax) : '—', sort: s ? Number(s.suggestedMax) : -1 },
+        { text: String(open), sort: open },
+      ],
+    }
+  })
 
   // Fixed in Business Settings: a new loan takes it, an edited loan keeps what it was saved with
   const feeLocked = Boolean(lookups.feeSetting)
@@ -75,10 +97,15 @@ export default function LoanForm({ loan, partners, lookups, canBackdate, onClose
         </>
       ) : (
         <Field label={t('UI_PARTNER')} hint={scoreHint ?? t('UI_ONLY_VERIFIED_PARTNERS_CAN_BORROW')}>
-          <select {...field('PartnerProfileID')} required className={INPUT}>
-            <option value="">{t('UI_SELECT_PARTNER')}</option>
-            {partners.map(partner => <option key={partner.id} value={partner.id}>{partner.label}</option>)}
-          </select>
+          <TablePicker
+            name="PartnerProfileID"
+            value={values.PartnerProfileID}
+            required
+            headers={[t('UI_NAME'), t('UI_GRADE'), t('UI_SCORE'), t('UI_SUGGESTED_MAX'), t('UI_OPEN_LOANS')]}
+            options={partnerOptions}
+            searchLabel={t('UI_SEARCH_PARTNERS')}
+            onChange={picked => setValues(current => ({ ...current, PartnerProfileID: picked }))}
+          />
         </Field>
       )}
 
