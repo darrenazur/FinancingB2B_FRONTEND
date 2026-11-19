@@ -1,8 +1,7 @@
 import { fileResponse } from '../../../../../lib/api/client'
 import { t } from '../../../../../lib/captions/t'
 
-// cbid: the co-borrower's ID image
-const KINDS = ['id1', 'id2', 'selfie', 'cbid']
+const KINDS = ['id1', 'id2', 'selfie']
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string; kind: string }> }) {
   const { id, kind } = await params

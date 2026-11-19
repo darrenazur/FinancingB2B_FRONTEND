@@ -9,7 +9,7 @@ import { t } from '../../lib/captions/t'
 const INITIAL: SaveState = { ok: false, error: null }
 const SECTIONS: { section: PartnerFieldRule['section']; label: string; always: string }[] = [
   { section: 'PARTNER', label: 'UI_PARTNER', always: 'UI_PARTNER_FIELDS_ALWAYS_REQUIRED' },
-  { section: 'COBORROWER', label: 'UI_CO_BORROWER', always: 'UI_CO_BORROWER_FIELDS_ALWAYS_REQUIRED' },
+  { section: 'COBORROWER', label: 'UI_COMAKER', always: 'UI_COMAKER_FIELDS_ALWAYS_REQUIRED' },
 ]
 
 interface PartnerFieldsFormProps {

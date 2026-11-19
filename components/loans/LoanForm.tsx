@@ -9,6 +9,7 @@ import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
 import TablePicker from '../forms/TablePicker'
+import CoMakerList from './CoMakerFields'
 import PromissoryNoteFields from './PromissoryNoteFields'
 import { t } from '../../lib/captions/t'
 
@@ -206,6 +207,7 @@ export default function LoanForm({ loan, partners, openLoans, lookups, canBackda
         </label>
       )}
       <PromissoryNoteFields loan={loan} purposes={lookups.purposes} />
+      {!loan && <CoMakerList partnerId={values.PartnerProfileID} required={lookups.coMakerRequired} />}
     </FormDialog>
   )
 }

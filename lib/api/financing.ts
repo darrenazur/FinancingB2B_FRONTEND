@@ -43,22 +43,6 @@ export interface PartnerDetails {
   // The type is what is saved (Vendor); the source follows from it (Business). '' = not set
   incomeSourceId: string
   incomeSourceTypeId: string
-  coBorrower: CoBorrowerDetails | null
-}
-
-// The co-borrower's ID number never leaves the API; hasIdNumber says whether one is saved.
-export interface CoBorrowerDetails {
-  firstName: string
-  middleName: string
-  lastName: string
-  birthDate: string
-  relationship: string
-  contactNo: string
-  email: string
-  address: string
-  idType: string
-  idImgPath: string
-  hasIdNumber: boolean
 }
 
 // One row of Configuration > Partner Fields. code is what the API and the SPs use, like EMAIL or CB_ID.
@@ -176,6 +160,8 @@ export interface LoanLookups {
   // Partner id -> grade, score and suggested max, for the hint beside the partner
   scores: Record<number, ScoreSummary>
   feeSetting: FeeSetting | null
+  // Field code -> required for co-makers (the CB_ rows of Partner Fields)
+  coMakerRequired: Record<string, boolean>
 }
 
 // The fee fixed in Business Settings for every new loan; null = typed on each loan
@@ -244,21 +230,6 @@ interface PartnerRow {
   Remarks?: string | null
   IncomeSourceID?: number | null
   IncomeSourceTypeID?: number | null
-  CoBorrower?: CoBorrowerRow | null
-}
-
-interface CoBorrowerRow {
-  FirstName: string | null
-  MiddleName: string | null
-  LastName: string | null
-  BirthDate: string | null
-  Relationship: string | null
-  ContactNo: string | null
-  Email: string | null
-  Address: string | null
-  IDType: string | null
-  IDImgPath: string | null
-  HasIDNumber: number
 }
 
 interface FieldRuleRow {
@@ -443,12 +414,54 @@ export async function getPartnerDetails(id: number): Promise<PartnerDetails | nu
     remarks: row.Remarks ?? '',
     incomeSourceId: row.IncomeSourceID ? String(row.IncomeSourceID) : '',
     incomeSourceTypeId: row.IncomeSourceTypeID ? String(row.IncomeSourceTypeID) : '',
-    coBorrower: row.CoBorrower ? toCoBorrower(row.CoBorrower) : null,
   }
 }
 
-function toCoBorrower(row: CoBorrowerRow): CoBorrowerDetails {
+export async function getPartnerFieldRules(): Promise<PartnerFieldRule[]> {
+  const rows = await getList<FieldRuleRow>('/partner-field-rule-view')
+  return rows.map(row => ({ code: row.FieldCd, section: row.Section, label: row.LabelCd, required: Boolean(row.IsRequired) }))
+}
+
+// One co-maker on a loan. The ID number never leaves the API; hasIdNumber says one is saved.
+export interface CoMaker {
+  id: number
+  loanId: number
+  loanNo: string
+  firstName: string
+  middleName: string
+  lastName: string
+  birthDate: string
+  relationship: string
+  contactNo: string
+  email: string
+  address: string
+  idType: string
+  idImgPath: string
+  hasIdNumber: boolean
+}
+
+interface CoMakerRow {
+  LoanCoMakerID: number
+  FinancingInformationID: number
+  LoanNo: string | number
+  FirstName: string | null
+  MiddleName: string | null
+  LastName: string | null
+  BirthDate: string | null
+  Relationship: string | null
+  ContactNo: string | null
+  Email: string | null
+  Address: string | null
+  IDType: string | null
+  IDImgPath: string | null
+  HasIDNumber: number
+}
+
+function toCoMaker(row: CoMakerRow): CoMaker {
   return {
+    id: Number(row.LoanCoMakerID),
+    loanId: Number(row.FinancingInformationID),
+    loanNo: String(row.LoanNo),
     firstName: row.FirstName ?? '',
     middleName: row.MiddleName ?? '',
     lastName: row.LastName ?? '',
@@ -463,9 +476,21 @@ function toCoBorrower(row: CoBorrowerRow): CoBorrowerDetails {
   }
 }
 
-export async function getPartnerFieldRules(): Promise<PartnerFieldRule[]> {
-  const rows = await getList<FieldRuleRow>('/partner-field-rule-view')
-  return rows.map(row => ({ code: row.FieldCd, section: row.Section, label: row.LabelCd, required: Boolean(row.IsRequired) }))
+export async function getLoanCoMakers(loanId: number): Promise<CoMaker[]> {
+  const rows = await getList<CoMakerRow>(`/loan-comaker-view/${loanId}`)
+  return rows.map(toCoMaker)
+}
+
+// "Copy from last loan": the co-makers on the partner's newest loan that has any
+export async function getLatestCoMakers(partnerId: number): Promise<CoMaker[]> {
+  const rows = await getList<CoMakerRow>(`/loan-comaker-latest/${partnerId}`)
+  return rows.map(toCoMaker)
+}
+
+// The CB_ rows of Partner Fields. None required if the rules can't be read; the SP still checks when saving.
+export async function getCoMakerRequired(): Promise<Record<string, boolean>> {
+  const rules = await getPartnerFieldRules().catch(() => [])
+  return Object.fromEntries(rules.filter(rule => rule.section === 'COBORROWER').map(rule => [rule.code, rule.required]))
 }
 
 export async function getLoans(): Promise<Loan[]> {
@@ -551,7 +576,7 @@ export async function getPaymentMethods(): Promise<Option[]> {
 }
 
 export async function getLoanLookups(): Promise<LoanLookups> {
-  const [currencies, terms, tenures, settlements, purposes, scores, feeSetting] = await Promise.all([
+  const [currencies, terms, tenures, settlements, purposes, scores, feeSetting, coMakerRequired] = await Promise.all([
     getList<LookupRow>('/currency-view'),
     getList<LookupRow>('/term-type-view'),
     getList<LookupRow>('/tenure-duration-view'),
@@ -559,6 +584,7 @@ export async function getLoanLookups(): Promise<LoanLookups> {
     getLoanPurposes(),
     getPartnerScores(),
     getLoanFeeSetting(),
+    getCoMakerRequired(),
   ])
 
   return {
@@ -569,6 +595,7 @@ export async function getLoanLookups(): Promise<LoanLookups> {
     purposes,
     scores,
     feeSetting,
+    coMakerRequired,
   }
 }
 
