@@ -2,7 +2,8 @@ import Link from 'next/link'
 import RefreshButton from '../../components/actions/RefreshButton'
 import PageHeader from '../../components/PageHeader'
 import StatCard from '../../components/StatCard'
-import { getDashboard, getOverdueLoans, getOverview } from '../../lib/api/business'
+import PaidList from '../../components/business/PaidList'
+import { getDashboard, getOverdueLoans, getOverview, getPaidToday } from '../../lib/api/business'
 import { getLoans, getPartners } from '../../lib/api/financing'
 import { getCurrentUser } from '../../lib/api/session'
 import { can } from '../../lib/permissions'
@@ -16,14 +17,16 @@ export default async function DashboardPage() {
   const permissions = (await getCurrentUser())?.permissions ?? []
   // Business totals and every late borrower: owner and admins only. The views carry no agent scope.
   const showBusiness = can(permissions, 'business.view')
-  const [partners, loans, dashboard, overview, overdueLoans] = await Promise.all([
+  const [partners, loans, dashboard, overview, overdueLoans, paidToday] = await Promise.all([
     can(permissions, 'partner.view') ? getPartners() : [],
     can(permissions, 'loan.view') ? getLoans() : [],
     showBusiness ? getDashboard() : null,
     showBusiness ? getOverview() : null,
     showBusiness ? getOverdueLoans() : [],
+    showBusiness ? getPaidToday() : [],
   ])
   const overdueTotal = sumMoney(overdueLoans.map(loan => loan.TotalOverdue || '0'))
+  const paidTotal = sumMoney(paidToday.map(row => row.AmountPaid || '0'))
 
   const activePartners = partners.filter(partner => !partner.deleted)
   const liveLoans = loans.filter(loan => !loan.deleted)
@@ -89,7 +92,8 @@ export default async function DashboardPage() {
             />
           </section>
 
-          <section className="mt-5 rounded-2xl border border-line bg-surface p-7">
+          <section className="mt-5 grid gap-5 xl:grid-cols-2">
+          <div className="rounded-2xl border border-line bg-surface p-7">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-xl font-semibold tracking-tight text-ink">{t('UI_OVERDUE_LOANS')}</h2>
               {overdueLoans.length > 0 && (
@@ -119,6 +123,21 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             )}
+          </div>
+
+          <div className="rounded-2xl border border-line bg-surface p-7">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold tracking-tight text-ink">{t('UI_PAID_TODAY')}</h2>
+              <Link href="/business/collections" className="text-base font-medium text-accent-strong hover:underline">{t('UI_VIEW_HISTORY')}</Link>
+            </div>
+            <p className="mb-2 text-base text-body">
+              {t('UI_TOTAL')}{' '}<span className="font-semibold tabular-nums text-ink">{formatMoney(paidTotal)}</span>
+              {' · '}{t('UI_LOANS_PAID', { count: paidToday.length })}
+            </p>
+            {paidToday.length === 0
+              ? <p className="py-6 text-base text-muted">{t('UI_NO_PAYMENTS_TODAY')}</p>
+              : <PaidList rows={paidToday} />}
+          </div>
           </section>
         </>
       )}

@@ -25,7 +25,7 @@ const BLANK: Omit<PartnerDetails, 'id'> = {
   countryId: '', provinceId: '', cityId: '', zipCodeId: '',
   contactNo: '', email: '', telephoneNo: '',
   idType1: '', idImgPath1: '', idType2: '', idImgPath2: '', selfiePath: '',
-  recommendedBy: '', remarks: '', incomeSourceId: '', incomeSourceTypeId: '', coBorrower: null,
+  recommendedBy: '', remarks: '', incomeSourceId: '', incomeSourceTypeId: '',
 }
 
 interface PartnerFormProps {
@@ -36,22 +36,16 @@ interface PartnerFormProps {
 
 export default function PartnerForm({ partner, lookups, onClose }: PartnerFormProps) {
   const isNew = partner === null
-  const { coBorrower: savedCoBorrower, ...saved } = partner ?? BLANK
-  const cb = savedCoBorrower
+  const saved = partner ?? BLANK
   const { values, setValues, field } = useFields({
     ...saved,
     idNo1: '', idNo2: '',
-    cbFirstName: cb?.firstName ?? '', cbMiddleName: cb?.middleName ?? '', cbLastName: cb?.lastName ?? '',
-    cbBirthDate: cb?.birthDate ?? '', cbRelationship: cb?.relationship ?? '', cbContactNo: cb?.contactNo ?? '',
-    cbEmail: cb?.email ?? '', cbAddress: cb?.address ?? '', cbIdType: cb?.idType ?? '', cbIdNo: '', cbIdImgPath: cb?.idImgPath ?? '',
   })
   const [unlocked, setUnlocked] = useState(isNew)
   const [accepted, setAccepted] = useState(false)
   const [consented, setConsented] = useState(false)
-  const [hasCoBorrower, setHasCoBorrower] = useState(cb !== null)
   const [removeId1, setRemoveId1] = useState(false)
   const [removeId2, setRemoveId2] = useState(false)
-  const [removeCbId, setRemoveCbId] = useState(false)
 
   // Configuration > Partner Fields decides these. An optional field says so in its label.
   const required = (code: string) => lookups.required[code] ?? false
@@ -289,84 +283,6 @@ export default function PartnerForm({ partner, lookups, onClose }: PartnerFormPr
       <Field label={label('UI_REMARKS', 'REMARKS')}>
         <textarea {...field('remarks')} name="Remarks" required={required('REMARKS')} maxLength={500} rows={3} className={INPUT} />
       </Field>
-
-      <p className={SECTION}>{t('UI_CO_BORROWER')}</p>
-      <label className={CHECKBOX}>
-        <input
-          type="checkbox"
-          name="HasCoBorrower"
-          checked={hasCoBorrower}
-          onChange={event => setHasCoBorrower(event.target.checked)}
-          className="mt-1 h-4 w-4"
-        />
-        {t('UI_HAS_CO_BORROWER')}
-      </label>
-      {!isNew && cb && !hasCoBorrower && (
-        <p className="text-base text-bad">{t('UI_SAVING_REMOVES_THE_CO_BORROWER')}</p>
-      )}
-      {hasCoBorrower && (
-        <div className={GRID}>
-          <Field label={t('UI_FIRST_NAME')}>
-            <input {...field('cbFirstName')} name="CBFirstName" required maxLength={150} className={INPUT} />
-          </Field>
-          <Field label={t('UI_MIDDLE_NAME_OPTIONAL')}>
-            <input {...field('cbMiddleName')} name="CBMiddleName" maxLength={150} className={INPUT} />
-          </Field>
-          <Field label={t('UI_LAST_NAME')}>
-            <input {...field('cbLastName')} name="CBLastName" required maxLength={150} className={INPUT} />
-          </Field>
-          <Field label={label('UI_BIRTH_DATE', 'CB_BIRTHDATE')} hint={t('UI_MUST_BE_18_OR_OLDER')}>
-            <DatePicker
-              name="CBBirthDate"
-              value={values.cbBirthDate}
-              onChange={cbBirthDate => setValues(current => ({ ...current, cbBirthDate }))}
-              max={latestBirthDate()}
-              required={required('CB_BIRTHDATE')}
-            />
-          </Field>
-          <Field label={label('UI_RELATIONSHIP', 'CB_RELATIONSHIP')} hint={t('UI_RELATIONSHIP_HINT')}>
-            <input {...field('cbRelationship')} name="CBRelationship" required={required('CB_RELATIONSHIP')} maxLength={50} className={INPUT} />
-          </Field>
-          <Field label={label('UI_MOBILE_NUMBER', 'CB_CONTACTNO')}>
-            <input {...field('cbContactNo', digitsOnly)} name="CBContactNo" inputMode="numeric" required={required('CB_CONTACTNO')} maxLength={20} className={INPUT} />
-          </Field>
-          <Field label={label('UI_EMAIL', 'CB_EMAIL')}>
-            <input {...field('cbEmail')} name="CBEmail" type="email" required={required('CB_EMAIL')} maxLength={100} className={INPUT} />
-          </Field>
-          <Field label={label('UI_STREET_ADDRESS', 'CB_ADDRESS')}>
-            <input {...field('cbAddress')} name="CBAddress" required={required('CB_ADDRESS')} maxLength={200} className={INPUT} />
-          </Field>
-          {canRemove('CB_ID', cb?.idType, cb?.idImgPath, cb?.hasIdNumber) && removeBox('CBRemoveID', removeCbId, setRemoveCbId)}
-          <fieldset disabled={removeCbId} className="contents">
-          <Field label={label('UI_ID_TYPE', 'CB_ID')}>
-            <select {...field('cbIdType')} name="CBIDType" required={required('CB_ID')} className={INPUT}>
-              <option value="">{t('UI_SELECT_ID_TYPE')}</option>
-              {idTypes(values.cbIdType).map(type => <option key={type}>{type}</option>)}
-            </select>
-          </Field>
-          <Field label={label('UI_ID_NUMBER', 'CB_ID')} hint={cb?.hasIdNumber ? t('UI_SAVED_NUMBERS_STAY_HIDDEN_LEAVE_BLANK_TO_KEEP_THE_CURRENT') : undefined}>
-            <input
-              {...field('cbIdNo')}
-              name="CBIDNo"
-              type="password"
-              autoComplete="off"
-              required={required('CB_ID') && !cb?.hasIdNumber}
-              maxLength={30}
-              className={INPUT}
-            />
-          </Field>
-          <FileField
-            label={label('UI_ID_IMAGE', 'CB_ID')}
-            name="CBIDImgPath"
-            kind="id"
-            value={values.cbIdImgPath}
-            onChange={key => setValues(current => ({ ...current, cbIdImgPath: key }))}
-            viewHref={fileHref('cbid', values.cbIdImgPath)}
-            required={required('CB_ID') && !cb?.idImgPath}
-          />
-          </fieldset>
-        </div>
-      )}
 
       {isNew && (
         <>

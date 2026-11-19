@@ -228,6 +228,17 @@ export async function getOverdueLoans(): Promise<ReportRow[]> {
   return (await report('overdue-loan')).sort((a, b) => Number(b.DaysLate) - Number(a.DaysLate))
 }
 
+// Each loan that paid today, net of reversals, biggest first.
+export async function getPaidToday(): Promise<ReportRow[]> {
+  return (await report('paid-today')).sort((a, b) => Number(b.AmountPaid) - Number(a.AmountPaid))
+}
+
+// Each loan that paid, per day: newest day first, biggest first within a day.
+export async function getPaidDays(): Promise<ReportRow[]> {
+  return (await report('paid-day')).sort((a, b) =>
+    (b.PayDate ?? '').localeCompare(a.PayDate ?? '') || Number(b.AmountPaid) - Number(a.AmountPaid))
+}
+
 export async function getFunds(): Promise<BizFund[]> {
   return (await view('fund')).filter(row => !row.Deleted)
     .map(row => ({ id: Number(row.BizFundID), name: cell(row.Name), balance: cell(row.Balance) || '0' }))

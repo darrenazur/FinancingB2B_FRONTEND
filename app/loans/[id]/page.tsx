@@ -11,7 +11,8 @@ import PageHeader from '../../../components/PageHeader'
 import StatCard from '../../../components/StatCard'
 import StatusBadge from '../../../components/StatusBadge'
 import AuditCell from '../../../components/table/AuditCell'
-import { getInstallments, getLoan, getLoanPurposes, getPaymentMethods, getPayments, getPenalties, getWriteOffs, Installment } from '../../../lib/api/financing'
+import CoMakersSection from '../../../components/loans/CoMakersSection'
+import { getCoMakerRequired, getInstallments, getLoan, getLoanCoMakers, getLoanPurposes, getPaymentMethods, getPayments, getPenalties, getWriteOffs, Installment } from '../../../lib/api/financing'
 import { getCurrentUser } from '../../../lib/api/session'
 import { formatDate, formatMoney, manilaToday, sumMoney, toAmount } from '../../../lib/format'
 import { can } from '../../../lib/permissions'
@@ -57,13 +58,15 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   const loan = await getLoan(id)
   if (!loan) notFound()
 
-  const [installments, payments, penalties, methods, writeOffs, purposes] = await Promise.all([
+  const [installments, payments, penalties, methods, writeOffs, purposes, coMakers, coMakerRequired] = await Promise.all([
     getInstallments(loan.id),
     getPayments(loan.id),
     getPenalties(loan.id),
     getPaymentMethods(),
     getWriteOffs(loan.id),
     getLoanPurposes(),
+    getLoanCoMakers(loan.id),
+    getCoMakerRequired(),
   ])
 
   const isOpen = !loan.closed && !loan.deleted
@@ -229,6 +232,8 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
           {loan.settlementName === 'FIXED' && <p className="mt-5 text-sm text-muted">{t('UI_EFFECTIVE_RATE_NOTE')}</p>}
         </div>
       </section>
+
+      <CoMakersSection loanId={loan.id} loanNo={loan.loanNo} coMakers={coMakers} required={coMakerRequired} canEdit={isOpen && can(permissions, 'loan.note')} />
 
       <Section title={t('UI_INSTALLMENTS')}>
         {installments.length === 0 ? <Empty text={t('UI_NO_INSTALLMENTS')} /> : (

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { send } from '../../lib/api/client'
+import { type CoMaker, getLatestCoMakers } from '../../lib/api/financing'
 import { readableError } from '../../lib/api/messages'
 import { SaveState } from '../../lib/config/resources'
 import { t } from '../../lib/captions/t'
@@ -62,7 +63,7 @@ export async function saveLoan(
   }
 
   const result = id === null
-    ? await write('POST', '/financing-information-add', { ...payload, RequestKey: requestKey })
+    ? await write('POST', '/financing-information-add', { ...payload, RequestKey: requestKey, CoMakers: text(formData, 'CoMakers') })
     : await write('PUT', '/financing-information-update', { ...payload, FinancingInformationID: id })
 
   if (!result.saved) return result.state
@@ -77,6 +78,39 @@ export async function saveLoanNote(id: number, _previous: SaveState, formData: F
   if (!result.saved) return result.state
   refresh()
   return { ok: true, error: null }
+}
+
+// One co-maker on a saved loan (loan.note). The form sends the fields as one JSON field, "CoMaker".
+// The loan and co-maker ids go last, so the fields can't change which record is saved.
+export async function saveCoMaker(loanId: number, coMakerId: number | null, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  let fields: object
+  try {
+    fields = JSON.parse(text(formData, 'CoMaker'))
+  } catch {
+    return { ok: false, error: readableError('ERR_COMAKER_LIST_NOT_VALID') }
+  }
+  const result = await write('PUT', '/loan-comaker-save', { ...fields, FinancingInformationID: loanId, LoanCoMakerID: coMakerId })
+
+  if (!result.saved) return result.state
+  refresh()
+  return { ok: true, error: null }
+}
+
+export async function removeCoMaker(loanId: number, coMakerId: number): Promise<SaveState> {
+  const result = await write('DELETE', '/loan-comaker-remove', { FinancingInformationID: loanId, LoanCoMakerID: coMakerId })
+
+  if (!result.saved) return result.state
+  refresh()
+  return { ok: true, error: null }
+}
+
+// "Copy from last loan" on Add Loan
+export async function latestCoMakers(partnerId: number): Promise<{ ok: true; coMakers: CoMaker[] } | { ok: false; error: string }> {
+  try {
+    return { ok: true, coMakers: await getLatestCoMakers(partnerId) }
+  } catch {
+    return { ok: false, error: t('UI_CANT_REACH_THE_API_CHECK_THAT_IT_IS_RUNNING') }
+  }
 }
 
 // The API names this route "delete", but it runs CLOSEFINANCINGINFO_SP: loans are closed, never deleted.
