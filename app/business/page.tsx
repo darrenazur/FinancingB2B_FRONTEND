@@ -44,6 +44,10 @@ export default async function BusinessPage() {
             <p className="text-lg font-semibold text-ink">{t('UI_COLLECTIONS')}</p>
             <p className="mt-2 text-base text-body">{t('UI_COLLECTIONS_DESCRIPTION')}</p>
           </Link>
+          <Link href="/business/simulation" className="rounded-2xl border border-line bg-surface p-7 transition-colors hover:border-accent">
+            <p className="text-lg font-semibold text-ink">{t('UI_SIMULATION')}</p>
+            <p className="mt-2 text-base text-body">{t('UI_SIMULATION_DESCRIPTION')}</p>
+          </Link>
         </div>
       </section>
 

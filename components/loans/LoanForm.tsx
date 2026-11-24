@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { saveLoan } from '../../app/loans/actions'
 import type { BizOption } from '../../lib/api/business'
 import type { Loan, LoanLookups, Option } from '../../lib/api/financing'
-import { daysBetween, formatDate, formatMoney, manilaToday, sumMoney } from '../../lib/format'
+import { daysBetween, formatDate, formatMoney, manilaToday, sumMoney, toAmount } from '../../lib/format'
 import { newRequestKey } from '../../lib/requestKey'
 import DatePicker from '../forms/DatePicker'
 import FormDialog, { decimalOnly, Field, INPUT, useFields } from '../forms/FormDialog'
@@ -32,8 +32,13 @@ export default function LoanForm({ loan, partners, openLoans, lookups, canBackda
   const [confirmed, setConfirmed] = useState(false)
   const { values, setValues, field } = useFields({
     PartnerProfileID: loan ? String(loan.partnerId) : '',
-    // The API stores five decimals and takes two.
-    PrincipalAmt: loan ? loan.principal.replace(/(\.\d{2})\d*$/, '$1') : '',
+    // The API stores five decimals and takes two. A fee added to the loan is in the principal:
+    // the form shows the amount typed (principal - fee), and the SP adds the fee again
+    PrincipalAmt: loan
+      ? loan.processingFeeAdded
+        ? toAmount(sumMoney([loan.principal]) - sumMoney([loan.processingFeeAmt]))
+        : loan.principal.replace(/(\.\d{2})\d*$/, '$1')
+      : '',
     CurrencyCd: loan?.currency ?? 'PHP',
     InterestRate: loan ? String(loan.monthlyRate) : '',
     TermTypeID: loan ? String(loan.termTypeId) : '',
@@ -42,7 +47,9 @@ export default function LoanForm({ loan, partners, openLoans, lookups, canBackda
     BackdateReason: '',
     ProcessingFeeType: loan ? loan.processingFeeType ?? '' : lookups.feeSetting?.type ?? '',
     ProcessingFeeValue: loan ? (loan.processingFeeType ? loan.processingFeeValue.replace(/(\.\d{2})\d*$/, '$1') : '') : lookups.feeSetting?.value ?? '',
-    ProcessingFeeDeducted: loan && loan.processingFeeType ? (loan.processingFeeDeducted ? '1' : '0') : '1',
+    ProcessingFeeDeducted: loan && loan.processingFeeType
+      ? (loan.processingFeeAdded ? 'ADD' : loan.processingFeeDeducted ? '1' : '0')
+      : '1',
   })
 
   // The chosen partner's credit score, as advice only: any amount can still be saved
@@ -77,6 +84,8 @@ export default function LoanForm({ loan, partners, openLoans, lookups, canBackda
   const feeLocked = Boolean(lookups.feeSetting)
   const fee = feeOf(values.PrincipalAmt, values.ProcessingFeeType, values.ProcessingFeeValue)
   const feeHint = fee === null || fee <= BigInt(0) ? undefined
+    : values.ProcessingFeeDeducted === 'ADD'
+      ? t('UI_FEE_WORKING_ADDED', { fee: formatMoney(fee), net: formatMoney(values.PrincipalAmt), principal: formatMoney(sumMoney([values.PrincipalAmt]) + fee) })
     : values.ProcessingFeeDeducted === '1'
       ? t('UI_FEE_WORKING', { fee: formatMoney(fee), net: formatMoney(sumMoney([values.PrincipalAmt]) - fee), principal: formatMoney(values.PrincipalAmt) })
       : t('UI_FEE_WORKING_SEPARATE', { fee: formatMoney(fee), principal: formatMoney(values.PrincipalAmt) })
@@ -190,6 +199,7 @@ export default function LoanForm({ loan, partners, openLoans, lookups, canBackda
             <select {...field('ProcessingFeeDeducted')} className={INPUT}>
               <option value="1">{t('UI_FEE_DEDUCTED')}</option>
               <option value="0">{t('UI_FEE_PAID_SEPARATELY')}</option>
+              <option value="ADD">{t('UI_FEE_ADDED_TO_LOAN')}</option>
             </select>
           </Field>
         )}

@@ -187,6 +187,10 @@ async function report(entity: string): Promise<ReportRow[]> {
 }
 
 export const getMonthlyReport = () => report('monthly')
+// Saved simulation snapshots, newest first (Business > Simulation > Snapshots)
+export async function getSimSnapshots(): Promise<ReportRow[]> {
+  return (await report('sim-snapshot')).sort((a, b) => Number(b.BizSimSnapshotID) - Number(a.BizSimSnapshotID))
+}
 export const getAgentMonthly = () => report('agent-monthly')
 // Accrual statements: one row per month, and each bank loan per month (newest first)
 export const getStatements = () => report('statement')
