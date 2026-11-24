@@ -92,6 +92,8 @@ export interface Loan extends Audit {
   processingFeeValue: string
   processingFeeAmt: string
   processingFeeDeducted: boolean
+  // Added to the loan: the principal includes the fee (the client got principal - fee)
+  processingFeeAdded: boolean
 }
 
 export interface Installment {
@@ -275,6 +277,7 @@ interface LoanRow extends AuditRow {
   ProcessingFeeValue?: string | null
   ProcessingFeeAmt?: string | null
   ProcessingFeeDeducted?: boolean | null
+  ProcessingFeeAdded?: boolean | null
 }
 
 interface InstallmentRow {
@@ -357,6 +360,7 @@ function toLoan(row: LoanRow): Loan {
     processingFeeValue: row.ProcessingFeeValue ?? '0',
     processingFeeAmt: row.ProcessingFeeAmt ?? '0',
     processingFeeDeducted: Boolean(row.ProcessingFeeDeducted),
+    processingFeeAdded: Boolean(row.ProcessingFeeAdded),
     paid: row.TotalPaidAmt ?? '0',
     overdueSince: row.OverdueSince ? row.OverdueSince.slice(0, 10) : null,
     ...readAudit(row),

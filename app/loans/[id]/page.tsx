@@ -108,7 +108,9 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
       loan.processingFeeType === 'PCT'
         ? t('UI_FEE_VALUE_PCT', { fee: money(loan.processingFeeAmt), pct: rate(Number(loan.processingFeeValue)) })
         : money(loan.processingFeeAmt),
-      loan.processingFeeDeducted
+      loan.processingFeeAdded
+        ? t('UI_FEE_WORKING_ADDED', { fee: money(loan.processingFeeAmt), net: money(sumMoney([loan.principal]) - sumMoney([loan.processingFeeAmt])), principal: money(loan.principal) })
+      : loan.processingFeeDeducted
         ? t('UI_FEE_WORKING', { fee: money(loan.processingFeeAmt), net: money(sumMoney([loan.principal]) - sumMoney([loan.processingFeeAmt])), principal: money(loan.principal) })
         : t('UI_FEE_PAID_SEPARATELY'),
     ].join(' · ')] as [string, string]] : []),

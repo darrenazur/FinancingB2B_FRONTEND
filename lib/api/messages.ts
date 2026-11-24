@@ -1,5 +1,8 @@
 // What people see for each API code. A code not listed here falls back to a generic sentence.
 const MESSAGES: Record<string, string> = {
+  ERR_BIZ_SNAPSHOT_INVALID: 'This snapshot could not be read. Try saving it again.',
+  ERR_BIZ_SNAPSHOT_NAME_REQUIRED: 'Enter a name for the snapshot.',
+  ERR_BIZ_SNAPSHOT_READ_ONLY: 'A snapshot can’t be changed. Save a new one instead.',
   ERR_CANNOT_CHANGE_OWN_ACCESS: 'You can’t deactivate yourself or change your own role.',
   ERR_CB_ADDRESS_REQUIRED: 'Enter the co-maker’s address.',
   ERR_CB_BIRTHDATE_REQUIRED: 'Enter the co-maker’s birth date.',

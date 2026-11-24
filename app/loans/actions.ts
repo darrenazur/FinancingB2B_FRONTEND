@@ -58,7 +58,9 @@ export async function saveLoan(
     BackdateReason: text(formData, 'BackdateReason'),
     ProcessingFeeType: text(formData, 'ProcessingFeeType'),
     ProcessingFeeValue: text(formData, 'ProcessingFeeValue'),
-    ProcessingFeeDeducted: text(formData, 'ProcessingFeeDeducted'),
+    // 'ADD' = added to the loan: deducted for cash, plus the added flag
+    ProcessingFeeDeducted: text(formData, 'ProcessingFeeDeducted') === 'ADD' ? '1' : text(formData, 'ProcessingFeeDeducted'),
+    ProcessingFeeAdded: text(formData, 'ProcessingFeeDeducted') === 'ADD' ? '1' : '0',
     ...noteFields(formData),
   }
 
