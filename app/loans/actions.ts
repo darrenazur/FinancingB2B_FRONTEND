@@ -213,6 +213,31 @@ export async function undoWriteOff(loanId: number, _previous: SaveState, formDat
   return { ok: true, error: null }
 }
 
+export async function payOffLoan(loanId: number, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  const result = await write('POST', '/loan-payoff', {
+    FinancingInformationID: loanId,
+    InterestInstallments: text(formData, 'InterestInstallments'),
+    PretermFeeType: text(formData, 'PretermFeeType'),
+    PretermFeeValue: text(formData, 'PretermFeeValue'),
+    Reason: text(formData, 'Reason'),
+  })
+
+  if (!result.saved) return result.state
+  refresh()
+  return { ok: true, error: null }
+}
+
+export async function undoPayoff(loanId: number, _previous: SaveState, formData: FormData): Promise<SaveState> {
+  const result = await write('POST', '/loan-payoff-undo', {
+    FinancingInformationID: loanId,
+    Reason: text(formData, 'reason'),
+  })
+
+  if (!result.saved) return result.state
+  refresh()
+  return { ok: true, error: null }
+}
+
 export async function waivePenalty(
   loanId: number,
   penaltyId: number,
