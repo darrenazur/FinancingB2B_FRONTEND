@@ -138,6 +138,20 @@ export interface WriteOff extends Audit {
   interest: string
 }
 
+export interface Payoff extends Audit {
+  id: number
+  date: string
+  interestInstallments: number
+  installmentsCancelled: number
+  interestCancelled: string
+  feeType: 'AMT' | 'PCT' | null
+  feeValue: string
+  fee: string
+  reason: string
+  undoneDate: string | null
+  undoReason: string
+}
+
 export interface Option {
   id: number
   label: string
@@ -321,6 +335,20 @@ interface WriteOffRow extends AuditRow {
   Installments: number
   PrincipalWrittenOff: string
   InterestWrittenOff: string
+}
+
+interface PayoffRow extends AuditRow {
+  LoanPayoffID: number
+  PayoffDate: string
+  InterestInstallments: number
+  InstallmentsCancelled: number
+  InterestCancelledAmt: string
+  PretermFeeType: 'AMT' | 'PCT' | null
+  PretermFeeValue: string | null
+  PretermFeeAmt: string
+  Reason: string
+  UndoneDate: string | null
+  UndoReason: string | null
 }
 
 type LookupRow = Record<string, string | number | boolean | null>
@@ -557,6 +585,36 @@ export async function getWriteOffs(loanId: number): Promise<WriteOff[]> {
       ...readAudit(row),
     }))
     .sort((a, b) => b.id - a.id)
+}
+
+// Newest first. Only the newest can still be in force; older ones were undone.
+export async function getPayoffs(loanId: number): Promise<Payoff[]> {
+  const rows = await getList<PayoffRow>(`/loan-payoff-view/${loanId}`)
+  return rows
+    .map(row => ({
+      id: row.LoanPayoffID,
+      date: row.PayoffDate,
+      interestInstallments: row.InterestInstallments,
+      installmentsCancelled: row.InstallmentsCancelled,
+      interestCancelled: row.InterestCancelledAmt,
+      feeType: row.PretermFeeType,
+      feeValue: row.PretermFeeValue ?? '0',
+      fee: row.PretermFeeAmt,
+      reason: row.Reason,
+      undoneDate: row.UndoneDate,
+      undoReason: row.UndoReason ?? '',
+      ...readAudit(row),
+    }))
+    .sort((a, b) => b.id - a.id)
+}
+
+// The pre-termination fee fixed in Business Settings; null = typed on each pay-off (the SP still applies the setting)
+export async function getPayoffFeeSetting(): Promise<FeeSetting | null> {
+  const [row] = await getList<LookupRow>('/loan-payoff-setting-view').catch(() => [])
+  if (!row) return null
+  if (Number(row.FeePct) > 0) return { type: 'PCT', value: String(row.FeePct) }
+  if (Number(row.FeeAmt) > 0) return { type: 'AMT', value: String(row.FeeAmt) }
+  return null
 }
 
 export async function getPenalties(loanId: number): Promise<Penalty[]> {

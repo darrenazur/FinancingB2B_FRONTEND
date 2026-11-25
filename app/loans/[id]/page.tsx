@@ -5,6 +5,7 @@ import ConfirmAction from '../../../components/actions/ConfirmAction'
 import RefreshButton from '../../../components/actions/RefreshButton'
 import AddPaymentButton from '../../../components/loans/AddPaymentButton'
 import LoanNoteButton from '../../../components/loans/LoanNoteButton'
+import PayoffButton from '../../../components/loans/PayoffButton'
 import { daysLate, isOverdue, loanStatusLabel, loanStatusTone } from '../../../components/loans/loanStatus'
 import { CLOSE_LOAN_MESSAGE } from '../../../components/loans/messages'
 import PageHeader from '../../../components/PageHeader'
@@ -12,11 +13,11 @@ import StatCard from '../../../components/StatCard'
 import StatusBadge from '../../../components/StatusBadge'
 import AuditCell from '../../../components/table/AuditCell'
 import CoMakersSection from '../../../components/loans/CoMakersSection'
-import { getCoMakerRequired, getInstallments, getLoan, getLoanCoMakers, getLoanPurposes, getPaymentMethods, getPayments, getPenalties, getWriteOffs, Installment } from '../../../lib/api/financing'
+import { getCoMakerRequired, getInstallments, getLoan, getLoanCoMakers, getLoanPurposes, getPaymentMethods, getPayments, getPayoffFeeSetting, getPayoffs, getPenalties, getWriteOffs, Installment } from '../../../lib/api/financing'
 import { getCurrentUser } from '../../../lib/api/session'
 import { formatDate, formatMoney, manilaToday, sumMoney, toAmount } from '../../../lib/format'
 import { can } from '../../../lib/permissions'
-import { closeLoan, processLoanOverdue, reversePayment, undoWriteOff, waivePenalty, writeOffLoan } from '../actions'
+import { closeLoan, processLoanOverdue, reversePayment, undoPayoff, undoWriteOff, waivePenalty, writeOffLoan } from '../actions'
 import { t } from '../../../lib/captions/t'
 
 const TONE: Record<string, 'good' | 'neutral' | 'bad'> = {
@@ -58,7 +59,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   const loan = await getLoan(id)
   if (!loan) notFound()
 
-  const [installments, payments, penalties, methods, writeOffs, purposes, coMakers, coMakerRequired] = await Promise.all([
+  const [installments, payments, penalties, methods, writeOffs, purposes, coMakers, coMakerRequired, payoffs, payoffFeeSetting] = await Promise.all([
     getInstallments(loan.id),
     getPayments(loan.id),
     getPenalties(loan.id),
@@ -67,6 +68,8 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
     getLoanPurposes(),
     getLoanCoMakers(loan.id),
     getCoMakerRequired(),
+    getPayoffs(loan.id),
+    can(permissions, 'loan.payoff') ? getPayoffFeeSetting() : null,
   ])
 
   const isOpen = !loan.closed && !loan.deleted
@@ -93,6 +96,9 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   // A write-off date runs from the release, or the last payment if later, up to today.
   const writtenOff = writeOffs.find(item => !item.undoneDate)
   const canWriteOff = isOpen && can(permissions, 'loan.writeoff')
+  // Early pay-off: only one in force, and not on a written-off loan
+  const payoff = payoffs.find(item => !item.undoneDate)
+  const canPayoff = isOpen && can(permissions, 'loan.payoff')
   // Installments past due with something unpaid: what Process overdue would mark on this loan
   const lateInstallments = installments.filter(item => OPEN_INSTALLMENTS.includes(item.status)
     && item.dueDate.slice(0, 10) < manilaToday() && remainingDue(item) > BigInt(0)).length
@@ -201,11 +207,39 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
             triggerClass={SECONDARY_BUTTON}
           />
         )}
+        {canPayoff && !payoff && !writtenOff && balance > BigInt(0) && (
+          <PayoffButton
+            loanId={loan.id}
+            loanNo={loan.loanNo}
+            currency={loan.currency}
+            installments={installments}
+            lateFees={toAmount(sumMoney(unpaidFees.map(item => item.fee)))}
+            feeSetting={payoffFeeSetting}
+            className={SECONDARY_BUTTON}
+          />
+        )}
+        {canPayoff && payoff && (
+          <ConfirmAction
+            label={t('UI_UNDO_PAY_OFF')}
+            title={t('UI_UNDO_PAY_OFF_LOAN', { loanNo: loan.loanNo })}
+            message={t('UI_UNDO_PAY_OFF_MESSAGE')}
+            reasonLabel={t('UI_REASON')}
+            action={undoPayoff.bind(null, loan.id)}
+            lock={{ type: 'LOAN', id: loan.id }}
+            triggerClass={SECONDARY_BUTTON}
+          />
+        )}
       </div>
 
       {writtenOff && (
         <p role="status" className="mb-8 rounded-2xl border border-bad-line bg-bad-soft px-5 py-4 text-base text-bad">
           {t('UI_WRITTEN_OFF_BANNER', { date: formatDate(writtenOff.date), reason: writtenOff.reason })}
+        </p>
+      )}
+
+      {payoff && (
+        <p role="status" className="mb-8 rounded-2xl border border-line bg-elevated px-5 py-4 text-base text-body">
+          {t('UI_PAYOFF_BANNER', { date: formatDate(payoff.date), number: payoff.interestInstallments, interest: money(payoff.interestCancelled), reason: payoff.reason })}
         </p>
       )}
 
@@ -359,6 +393,47 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
                         <p className="text-sm text-muted">{item.undoReason}</p>
                       </>
                     ) : <StatusBadge label={t('UI_IN_FORCE')} tone="bad" />}
+                  </td>
+                  <td className={CELL}><AuditCell date={item.createdAt} by={item.createdBy} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Section>
+      )}
+
+      {payoffs.length > 0 && (
+        <Section title={t('UI_PAYOFFS')}>
+          <table className="w-full min-w-[1060px] text-left">
+            <thead className={TABLE_HEAD}>
+              <tr className="text-sm text-muted">
+                <th className={HEADER_CELL}>{t('UI_PAYOFF_DATE')}</th>
+                <th className={HEADER_CELL}>{t('UI_PAYOFF_KEEP')}</th>
+                <th className={`${HEADER_CELL} text-right`}>{t('UI_INTEREST_CANCELLED')}</th>
+                <th className={`${HEADER_CELL} text-right`}>{t('UI_PRETERM_FEE')}</th>
+                <th className={HEADER_CELL}>{t('UI_REASON')}</th>
+                <th className={HEADER_CELL}>{t('UI_STATUS')}</th>
+                <th className={HEADER_CELL}>{t('UI_CREATED')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line text-base text-body">
+              {payoffs.map(item => (
+                <tr key={item.id}>
+                  <td className={`${CELL} whitespace-nowrap font-medium text-ink`}>{formatDate(item.date)}</td>
+                  <td className={CELL}>{t('UI_PAYOFF_KEPT_VALUE', { number: item.interestInstallments })}</td>
+                  <td className={MONEY_CELL}>{money(item.interestCancelled)}</td>
+                  <td className={MONEY_CELL}>
+                    <p>{money(item.fee)}</p>
+                    {item.feeType === 'PCT' && <p className="text-sm text-muted">{rate(Number(item.feeValue))}</p>}
+                  </td>
+                  <td className={CELL}>{item.reason}</td>
+                  <td className={CELL}>
+                    {item.undoneDate ? (
+                      <>
+                        <p className="whitespace-nowrap">{t('UI_UNDONE_ON', { date: formatDate(item.undoneDate) })}</p>
+                        <p className="text-sm text-muted">{item.undoReason}</p>
+                      </>
+                    ) : <StatusBadge label={t('UI_IN_FORCE')} tone="neutral" />}
                   </td>
                   <td className={CELL}><AuditCell date={item.createdAt} by={item.createdBy} /></td>
                 </tr>
